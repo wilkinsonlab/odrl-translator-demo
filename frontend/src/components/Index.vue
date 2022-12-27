@@ -17,6 +17,13 @@ const result = ref<{
 } | null>(null);
 const isLoading = ref(false);
 
+function replaceURLByLink(text: string) {
+  const URLMatcher =
+    /(?:(?:https?|ftp|file):\/\/|www\.|ftp\.)(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[-A-Z0-9+&@#\/%=~_|$?!:,.])*(?:\([-A-Z0-9+&@#\/%=~_|$?!:,.]*\)|[A-Z0-9+&@#\/%=~_|$])/gim;
+
+  return text.replace(URLMatcher, (match) => `<a href="${match}">${match}</a>`);
+}
+
 async function onSubmit() {
   result.value = null;
   isLoading.value = true;
@@ -69,7 +76,7 @@ async function onSubmit() {
 
         <template v-if="result">
           <h3 class="blue">Policy description</h3>
-          {{ result.description }}.
+          <p v-html="replaceURLByLink(result.description)"></p>
 
           <template v-if="result.permissions && result.permissions.length > 0">
             <h3 class="green">Permissions</h3>
@@ -79,7 +86,11 @@ async function onSubmit() {
                 v-for="(permission, index) in result.permissions"
                 :key="index"
               >
-                {{ index + 1 }}. {{ permission.sentence }}
+                <span
+                  v-html="
+                    replaceURLByLink(`${index + 1}. ${permission.sentence}`)
+                  "
+                ></span>
 
                 <template
                   v-if="
@@ -92,7 +103,13 @@ async function onSubmit() {
                       v-for="(constraint, _index) in permission.constraints"
                       :key="_index"
                     >
-                      {{ index + 1 }}.1.{{ _index + 1 }}. {{ constraint }}
+                      <span
+                        v-html="
+                          replaceURLByLink(
+                            `${index + 1}.1.${_index + 1}. ${constraint}`
+                          )
+                        "
+                      ></span>
                     </li>
                   </ul>
                 </template>
@@ -106,7 +123,13 @@ async function onSubmit() {
                       v-for="(duty, _index) in permission.duties"
                       :key="_index"
                     >
-                      {{ index + 1 }}.1.{{ _index + 1 }}. {{ duty.sentence }}
+                      <span
+                        v-html="
+                          replaceURLByLink(
+                            `${index + 1}.1.${_index + 1}. ${duty.sentence}`
+                          )
+                        "
+                      ></span>
 
                       <template
                         v-if="duty.constraints && duty.constraints.length > 0"
@@ -116,11 +139,16 @@ async function onSubmit() {
                         </h5>
                         <ul>
                           <li
-                            v-for="(constraints, _index) in duty.constraints"
+                            v-for="(constraint, _index) in duty.constraints"
                             :key="_index"
                           >
-                            {{ index + 1 }}.1.{{ _index + 1 }}.
-                            {{ constraints }}
+                            <span
+                              v-html="
+                                replaceURLByLink(
+                                  `${index + 1}.1.${_index + 1}. ${constraint}`
+                                )
+                              "
+                            ></span>
                           </li>
                         </ul>
                       </template>
@@ -140,7 +168,11 @@ async function onSubmit() {
                 v-for="(prohibition, index) in result.prohibitions"
                 :key="index"
               >
-                {{ index + 1 }}. {{ prohibition.sentence }}
+                <span
+                  v-html="
+                    replaceURLByLink(`${index + 1}. ${prohibition.sentence}`)
+                  "
+                ></span>
 
                 <template
                   v-if="prohibition.remedies && prohibition.remedies.length > 0"
@@ -151,7 +183,13 @@ async function onSubmit() {
                       v-for="(remedy, _index) in prohibition.remedies"
                       :key="_index"
                     >
-                      {{ index + 1 }}.1.{{ _index + 1 }}. {{ remedy.sentence }}
+                      <span
+                        v-html="
+                          replaceURLByLink(
+                            `${index + 1}.1.${_index + 1}. ${remedy.sentence}`
+                          )
+                        "
+                      ></span>
                     </li>
                   </ul>
                 </template>
