@@ -10,6 +10,8 @@ import languages from "./languages.js";
 import translate from "./translate.js";
 
 import Policy from "./policy.js";
+import Permission from "./permission.js";
+import Prohibition from "./prohibition.js";
 import Duty from "./duty.js";
 import Constraint from "./constraint.js";
 
@@ -158,7 +160,7 @@ export default async function parsePolicy(input: string, language = "english") {
                     finalPermissionObject.duties = [];
 
                     for (const duty of duties) {
-                      let _duty = await parseDuty(duty, kb);
+                      let _duty = await parseDuty(duty, kb, permission);
 
                       if (language !== "english") {
                         _duty.sentence = await translate(
@@ -262,8 +264,9 @@ export default async function parsePolicy(input: string, language = "english") {
                         sentence: "",
                       };
 
-                      let remedySentence = (await parseDuty(remedy, kb, true))
-                        .sentence;
+                      let remedySentence = (
+                        await parseDuty(remedy, kb, prohibition, true)
+                      ).sentence;
 
                       if (language !== "english") {
                         remedySentence = await translate(
@@ -509,12 +512,18 @@ async function parseConstraint(constraint: Constraint, kb: $rdf.Formula) {
   return permissionSentence;
 }
 
-async function parseDuty(duty: Duty, kb: $rdf.Formula, remedy = false) {
+async function parseDuty(
+  duty: Duty,
+  kb: $rdf.Formula,
+  parent: Permission | Prohibition,
+  remedy = false
+) {
   const _duty = {
     sentence: "",
     constraints: [] as Array<string>,
   };
   const dutyTargets = duty.targets;
+  const dutyAssigners = duty.functions.get("assigner")?.sources;
   const dutyConstraints = duty.constraints;
   const actionsLabels = [];
 
@@ -532,9 +541,20 @@ async function parseDuty(duty: Duty, kb: $rdf.Formula, remedy = false) {
 
   if (duty.actions && duty.actions.length > 0) {
     for (const action of duty.actions) {
-      actionsLabels.push(action.label?.toLocaleLowerCase());
+      const toPreposition = [];
+
+      if (action.uri !== ODRL("grantUse").value) {
+        actionsLabels.push(action.label?.toLocaleLowerCase());
+      } else {
+        toPreposition.push(action.label?.toLocaleLowerCase());
+      }
 
       dutySentence += listToString(actionsLabels);
+
+      if (toPreposition.length > 0) {
+        dutySentence += `${listToString(toPreposition)} to`;
+      }
+
       dutySentence += " ";
 
       if (dutyTargets && dutyTargets.length > 0) {
@@ -542,7 +562,7 @@ async function parseDuty(duty: Duty, kb: $rdf.Formula, remedy = false) {
       } else {
         const dutyAssigner = duty.functions.get("assigner");
 
-        if (dutyAssigner) {
+        /*if (dutyAssigner) {
           dutySentence += `the party defined as ${listToString(
             dutyAssigner.sources
           )}`;
@@ -550,29 +570,51 @@ async function parseDuty(duty: Duty, kb: $rdf.Formula, remedy = false) {
           dutySentence += "him";
         }
 
-        dutySentence += " ";
+        dutySentence += " ";*/
       }
 
       const actionRefinements = action.refinements;
 
       if (actionRefinements && actionRefinements.length > 0) {
-        if ([ODRL("compensate").value].includes(action.uri)) {
-          dutySentence += " by ";
-        }
-
         for (const refinement of actionRefinements) {
           const leftOperand = refinement.leftOperand;
           const oeprator = refinement.operator;
-
-          dutySentence += getSentence(leftOperand.object.value)[
-            oeprator.object.value
-          ];
-
           const rightOperand = refinement.rightOperand;
-
-          dutySentence += ` ${rightOperand.object.value}`;
-
           const unit = refinement.unit;
+
+          if ([ODRL("compensate").value].includes(action.uri)) {
+            if (dutyAssigners && dutyAssigners.length > 0) {
+              dutySentence += `the data controller(s) defined as ${listToString(
+                dutyAssigners.map((assigner) => lastURISegment(assigner)!)
+              )}`;
+            } else {
+              dutySentence += "him/them";
+            }
+
+            dutySentence += " by ";
+          }
+
+          if (ODRL("recipient").value === leftOperand.object.value) {
+            if (
+              parent.functions
+                .get("assigner")
+                ?.sources.includes(rightOperand.object.value)
+            ) {
+              dutySentence += "him/them";
+            } else {
+              dutySentence += getSentence(leftOperand.object.value)[
+                oeprator.object.value
+              ];
+
+              dutySentence += ` ${rightOperand.object.value}`;
+            }
+          } else {
+            dutySentence += getSentence(leftOperand.object.value)[
+              oeprator.object.value
+            ];
+
+            dutySentence += ` ${rightOperand.object.value}`;
+          }
 
           if (unit) {
             const unitStore = await fetchUrl(unit.object.value);
