@@ -113,19 +113,21 @@ export default async function parsePolicy(input: string, language = "english") {
                   const actionsLabels = actions?.map((action) => action.label);
 
                   let permissionSentence = `The data controller, defined as ${assigner?.sources.map(
-                    (source) => source.split("/").at(-1)
+                    (source) => lastURISegment(source)
                   )} gives the permission`;
-                  permissionSentence += assignee
-                    ? ` to ${assignee?.sources
-                        .map((source) => source.split("/").at(-1))
-                        .join(", ")
-                        .replace(/, ([^,]*)$/, " and $1")}`
-                    : "";
+
+                  if (assignee && assignee.sources.length > 0) {
+                    permissionSentence += assignee
+                      ? ` to ${listToString(
+                          assignee.sources.map(
+                            (source) => lastURISegment(source)!
+                          )
+                        )}`
+                      : "";
+                  }
 
                   if (actionsLabels && actionsLabels.length > 0) {
-                    permissionSentence += ` to ${actionsLabels
-                      .join(", ")
-                      .replace(/, ([^,]*)$/, " and $1")} `;
+                    permissionSentence += ` to ${listToString(actionsLabels)} `;
                   }
 
                   permissionSentence += `the ${parseTargets(targets!, kb)}`;
@@ -216,26 +218,31 @@ export default async function parsePolicy(input: string, language = "english") {
 
                   const actionsLabels = actions?.map((action) => action.label);
 
-                  let prohibitionSentence = `The data controllers(s), defined as ${assigners?.sources
-                    .map((assigner) => assigner.split("/").at(-1))
-                    .join(", ")
-                    .replace(/, ([^,]*)$/, " and $1")} prohibits `;
+                  let prohibitionSentence = "";
+
+                  if (assigners) {
+                    prohibitionSentence += `The data controllers(s), defined as ${listToString(
+                      assigners?.sources.map(
+                        (assigner) => lastURISegment(assigner)!
+                      )
+                    )} prohibits `;
+                  }
+
                   prohibitionSentence += assignees
-                    ? ` to ${assigners?.sources
-                        .map((assigner) => assigner.split("/").at(-1))
-                        .join(", ")
-                        .replace(/, ([^,]*)$/, " and $1")}`
+                    ? ` to ${listToString(
+                        assignees?.sources.map(
+                          (assignee) => lastURISegment(assignee)!
+                        )
+                      )}`
                     : "";
 
                   if (actionsLabels && actionsLabels?.length > 0) {
-                    prohibitionSentence += ` to ${actionsLabels
-                      .join(", ")
-                      .replace(/, ([^,]*)$/, " and $1")} `;
+                    prohibitionSentence += ` to ${listToString(
+                      actionsLabels
+                    )} `;
                   }
 
-                  prohibitionSentence += targetsSentences
-                    .join(", ")
-                    .replace(/, ([^,]*)$/, " and $1");
+                  prohibitionSentence += listToString(targetsSentences);
 
                   if (language !== "english") {
                     prohibitionSentence = await translate(
@@ -527,7 +534,7 @@ async function parseDuty(duty: Duty, kb: $rdf.Formula, remedy = false) {
     for (const action of duty.actions) {
       actionsLabels.push(action.label?.toLocaleLowerCase());
 
-      dutySentence += actionsLabels.join(", ").replace(/, ([^,]*)$/, " and $1");
+      dutySentence += listToString(actionsLabels);
       dutySentence += " ";
 
       if (dutyTargets && dutyTargets.length > 0) {
@@ -536,9 +543,9 @@ async function parseDuty(duty: Duty, kb: $rdf.Formula, remedy = false) {
         const dutyAssigner = duty.functions.get("assigner");
 
         if (dutyAssigner) {
-          dutySentence += `the party defined as ${dutyAssigner.sources
-            .join(", ")
-            .replace(/, ([^,]*)$/, " and $1")}`;
+          dutySentence += `the party defined as ${listToString(
+            dutyAssigner.sources
+          )}`;
         } else {
           dutySentence += "him";
         }
@@ -604,9 +611,7 @@ async function parseDuty(duty: Duty, kb: $rdf.Formula, remedy = false) {
       const rightOperand = constraint.rightOperand;
 
       let dutyConstraintSentence = "The ";
-      dutyConstraintSentence += actionsLabels
-        .join(", ")
-        .replace(/, ([^,]*)$/, " and $1");
+      dutyConstraintSentence += listToString(actionsLabels);
       dutyConstraintSentence += ` action${actionsLabels.length > 1 ? "s" : ""}`;
       dutyConstraintSentence += " ";
 
@@ -655,9 +660,17 @@ function parseTargets(targets: Array<$rdf.Statement>, kb: $rdf.Formula) {
     targetsSentences.push(sentence);
   }
 
-  return targetsSentences.join(", ").replace(/, ([^,]*)$/, " and $1");
+  return listToString(targetsSentences);
 }
 
 function getSentenceOrLabel(triple: $rdf.Statement, kb: $rdf.Formula) {
   return getSentence(triple.object.value) ?? getLabel(triple, kb);
+}
+
+function listToString(list: Array<string>) {
+  return list.join(", ").replace(/, ([^,]*)$/, " and $1");
+}
+
+function lastURISegment(uri: string) {
+  return uri.split("/").at(-1);
 }

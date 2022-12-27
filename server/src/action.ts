@@ -27,7 +27,7 @@ export default class Action {
 
   /****************************** GETTERS ******************************/
 
-  public get label() {
+  public get label(): string {
     return (
       getLabel(this.#getActionURIStatement(), this.kb) || getSentence(this.uri)
     );
