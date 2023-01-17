@@ -1,6 +1,6 @@
 import Reverso from "reverso-api";
 
-const reverso = new Reverso();
+const reverso = new Reverso({ insecureHTTPParser: true });
 
 export default function translate(
   sentence: string,
@@ -12,7 +12,7 @@ export default function translate(
       sentence,
       fromLanguage,
       targetLanguage,
-      (err: any, response: any) => {
+      (err, response) => {
         if (err) {
           reject(err);
         } else {
