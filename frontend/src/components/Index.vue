@@ -63,6 +63,9 @@ async function onSubmit() {
           <option value="arabic">Arabic</option>
           <option value="italian">Italian</option>
           <option value="turkish">Turkish</option>
+          <option value="romanian">Romanian</option>
+          <option value="german">German</option>
+          <option value="portuguese">Portuguese</option>
         </select>
         <button @click="onSubmit">Submit</button>
       </div>
