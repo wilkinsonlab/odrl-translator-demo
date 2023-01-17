@@ -21,7 +21,7 @@ export default function getSentence(key: string): any {
     [ODRL("policyUsage").value]: "the rule is exercised",
     [ODRL("lt").value]: "lesser than",
     [ODRL("lteq").value]: "lesser than or equal to",
-    [ODRL("eq").value]: "equal to",
+    [ODRL("eq").value]: "equals to",
     [ODRL("neq").value]: "not equal to",
     [ODRL("gt").value]: "greater than",
     [ODRL("gteq").value]: "greater than or equal to",
