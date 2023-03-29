@@ -1,3 +1,7 @@
+![](./screenshots/1.png)
+
+![](./screenshots/2.png)
+
 # Prerequisites
 
 - Node.js v16.0.0 or higher
