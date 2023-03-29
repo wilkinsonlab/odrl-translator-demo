@@ -1,9 +1,14 @@
 import * as $rdf from "rdflib";
 
-import { ODRL } from "./namespaces.js";
-import { getLabel } from "./utils.js";
+import Rule from "./rule.js";
+import { ODRL, RDFS, SKOS, XSD } from "./namespaces.js";
+import { listToString, getSentenceOrLabel } from "./utils.js";
+import fetchIRI from "./fetch_iri.js";
 import Exception from "./exception.js";
+import Action from "./action.js";
 import StatementsMatcher from "./statements_matcher.js";
+import numericTypes from "./numeric_types.js";
+import parseXSDDuration from "./parse_xsd_duration.js";
 
 export default class Constraint {
   /**************************** ATTRIBUTES *****************************/
@@ -21,11 +26,6 @@ export default class Constraint {
   #unit: $rdf.Statement | undefined;
 
   /**
-   * The dataType of the constraint.
-   */
-  #dataType: $rdf.NamedNode;
-
-  /**
    * The operator of the constraint.
    */
   #operator: $rdf.Statement;
@@ -33,7 +33,7 @@ export default class Constraint {
   /**
    * The rightOperand of the constraint.
    */
-  #rightOperand: $rdf.Statement;
+  #rightOperands: Array<RightOperand> = [];
 
   /**
    * The rightOperandReference of the constraint.
@@ -52,7 +52,11 @@ export default class Constraint {
 
   /**************************** CONSTRUCTOR *****************************/
 
-  constructor(private kb: $rdf.Formula, private statement: $rdf.Statement) {
+  constructor(
+    private kb: $rdf.Formula,
+    private statement: $rdf.Statement,
+    private _rule: Rule
+  ) {
     this.#statementsMatcher = new StatementsMatcher(this.kb);
 
     this.#setLeftOperand();
@@ -74,16 +78,6 @@ export default class Constraint {
   }
 
   /**
-   * Get the label of the left operand.
-   *
-   * @readonly
-   * @memberof Constraint
-   */
-  public get leftOperandLabel() {
-    return getLabel(this.#leftOperand, this.kb);
-  }
-
-  /**
    * Get the operator of the constraint.
    *
    * @readonly
@@ -99,18 +93,8 @@ export default class Constraint {
    * @readonly
    * @memberof Constraint
    */
-  public get rightOperand() {
-    return this.#rightOperand;
-  }
-
-  /**
-   * Get the data type of the right operand.
-   *
-   * @readonly
-   * @memberof Constraint
-   */
-  public get dataType() {
-    return this.#dataType;
+  public get rightOperands() {
+    return this.#rightOperands;
   }
 
   /**
@@ -123,7 +107,45 @@ export default class Constraint {
     return this.#unit;
   }
 
+  public get rule() {
+    return this._rule;
+  }
+
   /****************************** METHODS ******************************/
+
+  public async leftOperandLabel(): Promise<string> {
+    const leftOperand = this.#leftOperand;
+    let label = await getSentenceOrLabel(leftOperand, this.kb);
+
+    if (typeof label[0] === "object") {
+      return label[0][this.#operator.object.value];
+    }
+
+    return label[0] ?? leftOperand.object.value;
+  }
+
+  public async rightOperandLabels() {
+    const labels = await Promise.all(
+      this.#rightOperands.map(async (rightOperand) => {
+        const leftOperandIRI = this.#leftOperand.object.value;
+        const isRightOperandIRI = rightOperand.isIRI;
+        let label = await rightOperand.label();
+
+        if (
+          !isRightOperandIRI &&
+          rightOperand.isOfDataType(XSD("duration").value)
+        ) {
+          label = parseXSDDuration(label!.toString());
+        } else if (leftOperandIRI === ODRL("percentage").value) {
+          label += "%";
+        }
+
+        return label?.toString();
+      })
+    );
+
+    return listToString(labels.filter(Boolean));
+  }
 
   #setLeftOperand() {
     const leftOperand = this.#statementsMatcher
@@ -135,7 +157,7 @@ export default class Constraint {
       this.#leftOperand = leftOperand[0];
     } else {
       throw new Exception(
-        `A leftOperand property must be defined in the constraint`,
+        `The constraint must have a "leftOperand" property defined`,
         500,
         "E_NO_LEFT_OPERAND_DEFINED"
       );
@@ -152,7 +174,7 @@ export default class Constraint {
       this.#operator = operator[0];
     } else {
       throw new Exception(
-        `An operator property must be defined in the constraint`,
+        `The constraint must have an "operator" property defined`,
         500,
         "E_NO_OPERATOR_DEFINED"
       );
@@ -160,19 +182,18 @@ export default class Constraint {
   }
 
   #setRightOperand() {
-    const rightOperand = this.#statementsMatcher
+    const rightOperands = this.#statementsMatcher
       .subject(this.statement.object)
       .predicate(ODRL("rightOperand"))
       .execute();
 
-    if (rightOperand) {
-      this.#rightOperand = rightOperand[0];
-
-      // @ts-ignore
-      this.#dataType = this.#rightOperand.object.datatype;
+    if (rightOperands) {
+      this.#rightOperands = rightOperands.map(
+        (rightOperand) => new RightOperand(this.kb, rightOperand)
+      );
     } else {
       throw new Exception(
-        `A rightOperand property must be defined in the constraint`,
+        `The constraint must have a "rightOperand" property defined`,
         500,
         "E_NO_RIGHT_OPERAND_DEFINED"
       );
@@ -188,5 +209,72 @@ export default class Constraint {
     if (unit) {
       this.#unit = unit[0];
     }
+  }
+}
+
+class RightOperand {
+  #statement: $rdf.Statement;
+
+  #value: string | number;
+
+  #dataType: string | undefined;
+
+  #isIRI: boolean;
+
+  constructor(private kb: $rdf.Formula, statement: $rdf.Statement) {
+    this.#statement = statement;
+
+    if (statement.object instanceof $rdf.Literal) {
+      this.#dataType = statement.object.datatype.value;
+    } else {
+      this.#isIRI = true;
+    }
+
+    this.#value = statement.object.value;
+  }
+
+  get statement() {
+    return this.#statement;
+  }
+
+  get value() {
+    return this.#value;
+  }
+
+  get dataType() {
+    return this.#dataType;
+  }
+
+  get isIRI() {
+    return this.#isIRI;
+  }
+
+  public async label(): Promise<string | number> {
+    const rightOperand = this.#statement;
+
+    let label: string | number = (
+      await getSentenceOrLabel(rightOperand, this.kb)
+    )[0];
+
+    if (!this.#isIRI) {
+      if (
+        numericTypes.map((type) => XSD(type).value).includes(this.#dataType!)
+      ) {
+        label = Number(this.#value);
+      } else {
+        label = String(this.#value);
+      }
+    }
+
+    return label;
+  }
+
+  /**
+   * Check if the right operand has the given data type.
+   * @param dataType DataType to check
+   * @returns boolean
+   */
+  public isOfDataType(dataType: string): boolean {
+    return this.dataType == dataType;
   }
 }

@@ -37,10 +37,10 @@ export default class Policy {
 
   /**************************** CONSTRUCTOR *****************************/
 
-  constructor(private kb: $rdf.Formula) {
+  constructor(private kb: $rdf.Formula, uid: string) {
     this.statementsMatcher = new StatementsMatcher(this.kb);
+    this.uid = new $rdf.NamedNode(uid);
 
-    this.#setUID();
     this.#setType();
     this.#setFunctions();
     this.#setPermissions();
@@ -71,18 +71,6 @@ export default class Policy {
   }
 
   /****************************** METHODS ******************************/
-
-  #setUID() {
-    const allStatements = this.statementsMatcher
-      .subject(undefined)
-      .predicate(undefined)
-      .object(undefined)
-      .execute();
-
-    if (allStatements && allStatements.length > 0) {
-      this.uid = new $rdf.NamedNode(allStatements.at(-1)?.subject.value!);
-    }
-  }
 
   #setType() {
     const result = this.statementsMatcher

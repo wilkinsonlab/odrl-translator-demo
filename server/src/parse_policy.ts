@@ -1,8 +1,7 @@
 import * as $rdf from "rdflib";
 
-import { isValidUrl, getLabel } from "./utils.js";
-import fetchUrl from "./fetch_url.js";
-import parseXSDDuration from "./parse_xsd_duration.js";
+import { isValidUrl, listToString, getSentenceOrLabel } from "./utils.js";
+import fetchIRI from "./fetch_iri.js";
 import numericTypes from "./numeric_types.js";
 import dateTypes from "./date_types.js";
 import getSentence from "./sentences.js";
@@ -14,6 +13,7 @@ import Permission from "./permission.js";
 import Prohibition from "./prohibition.js";
 import Duty from "./duty.js";
 import Constraint from "./constraint.js";
+import { interpolate } from "@poppinss/utils/build/helpers.js";
 
 type PermissionType = {
   sentence: string;
@@ -33,8 +33,8 @@ type DutyType = {
 
 type PolicyType = {
   description: string;
-  permissions?: Array<PermissionType>;
-  prohibitions?: Array<ProhibitionType>;
+  permissions: Array<PermissionType>;
+  prohibitions: Array<ProhibitionType>;
 };
 
 const RDF = $rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
@@ -42,63 +42,77 @@ const RDFS = $rdf.Namespace("http://www.w3.org/2000/01/rdf-schema#");
 const XSD = $rdf.Namespace("http://www.w3.org/2001/XMLSchema#");
 const ODRL = $rdf.Namespace("http://www.w3.org/ns/odrl/2/");
 const OCCE = $rdf.Namespace("https://w3id.org/occe/");
-const OAC = $rdf.Namespace("https://w3id.org/oac#");
+const SKOS = $rdf.Namespace("http://www.w3.org/2004/02/skos/core#");
+const EX = $rdf.Namespace("https://example.com/");
 
 const XSDNumericTypes = numericTypes.map((type) => XSD(type).value);
 const XSDDateTypes = dateTypes.map((type) => XSD(type).value);
 
-export default async function parsePolicy(input: string, language = "english") {
+export default async function parsePolicy(
+  input: string,
+  language = "english"
+): Promise<Array<PolicyType>> {
   return new Promise((resolve, reject) => {
     (async () => {
       if (input) {
-        const object = JSON.parse(input);
-        const baseURI = object["uid"];
-        //const type = object["@type"];
-        const { profile } = object;
+        input = input.trim();
 
-        //const baseStore = $rdf.graph();
+        let type;
+        let graph;
+
+        try {
+          graph = JSON.parse(input);
+          type = "application/ld+json";
+        } catch {
+          graph = input;
+          type = "text/turtle";
+        }
+
         const store = await getStore([
           "https://www.w3.org/ns/odrl/2/ODRL22.ttl",
-          //profile,
         ]);
 
-        //let base: string | null = "";
-        let result = "";
+        const policies: Array<PolicyType> = [];
 
-        /*$rdf.parse(
+        $rdf.parse(
           input,
-          baseStore,
-          "https://example.com/",
-          "application/ld+json",
-          async (error, _kb) => {
-            if (error) {
-              reject(error);
+          store,
+          type === "text/turtle" ? EX("").value : graph["uid"],
+          type,
+          async (_error, kb) => {
+            if (_error || !kb) {
+              reject(_error);
             } else {
-              const lastTriple = _kb?.statementsMatching(
-                undefined,
-                undefined,
-                undefined
-              );
+              const policiesIRIs = new Set<string>();
 
-              if (lastTriple && lastTriple?.length > 0) {
-                base = lastTriple.at(-1)!.subject.value;
-              }*/
+              for (const policyType of [
+                "Policy",
+                "Set",
+                "Offer",
+                "Agreement",
+                "Request",
+              ]) {
+                const policyTypeStatement = kb.statementsMatching(
+                  undefined,
+                  RDF("type"),
+                  ODRL(policyType)
+                );
 
-        const policyTranslation: PolicyType = {
-          description: "",
-        };
+                if (policyTypeStatement && policyTypeStatement.length > 0) {
+                  policyTypeStatement.forEach((statement) => {
+                    policiesIRIs.add(statement.subject.value);
+                  });
+                }
+              }
 
-        if (baseURI) {
-          $rdf.parse(
-            input,
-            store,
-            baseURI,
-            "application/ld+json",
-            async (_error, kb) => {
-              if (_error || !kb) {
-                reject(_error);
-              } else {
-                const policy = new Policy(kb);
+              for (const policyIRI of policiesIRIs) {
+                const policyTranslation: PolicyType = {
+                  description: "",
+                  permissions: [],
+                  prohibitions: [],
+                };
+
+                const policy = new Policy(kb, policyIRI);
                 const permissions = policy.permissions;
                 const prohibitions = policy.prohibitions;
                 const permissionsSentences = [];
@@ -112,9 +126,24 @@ export default async function parsePolicy(input: string, language = "english") {
                   const finalPermissionObject: PermissionType = {
                     sentence: "",
                   };
-                  const actionsLabels = actions?.map((action) => action.label);
+                  const actionsLabels = [];
+                  const actionsRefinementsSetnences = [];
 
-                  let permissionSentence = `The data controller, defined as ${assigner?.sources.map(
+                  if (actions) {
+                    for (const action of actions!) {
+                      actionsLabels.push(await action.label());
+
+                      if (action.refinements.length > 0) {
+                        for (const refinement of action.refinements) {
+                          actionsRefinementsSetnences.push(
+                            await parseConstraint(refinement, kb)
+                          );
+                        }
+                      }
+                    }
+                  }
+
+                  let permissionSentence = `The policy issuer, defined as ${assigner?.sources.map(
                     (source) => lastURISegment(source)
                   )} gives the permission`;
 
@@ -132,16 +161,33 @@ export default async function parsePolicy(input: string, language = "english") {
                     permissionSentence += ` to ${listToString(actionsLabels)} `;
                   }
 
-                  permissionSentence += `the ${parseTargets(targets!, kb)}`;
+                  permissionSentence += parseTargets(targets!, kb);
 
-                  if (constraints.length > 0) {
+                  if (
+                    constraints.length > 0 ||
+                    actionsRefinementsSetnences.length > 0
+                  ) {
                     finalPermissionObject.constraints = [];
 
                     for (const constraint of constraints) {
+                      const constraintSentence = await parseConstraint(
+                        constraint,
+                        kb
+                      );
                       finalPermissionObject.constraints.push(
-                        await parseConstraint(constraint, kb)
+                        language !== "english"
+                          ? await translate(
+                              constraintSentence,
+                              "english",
+                              language
+                            )
+                          : constraintSentence
                       );
                     }
+
+                    finalPermissionObject.constraints.push(
+                      ...actionsRefinementsSetnences
+                    );
                   } else {
                     permissionSentence += " without any constraint.";
                   }
@@ -218,7 +264,13 @@ export default async function parsePolicy(input: string, language = "english") {
                     targetsSentences.push(sentence);
                   }
 
-                  const actionsLabels = actions?.map((action) => action.label);
+                  const actionsLabels = [];
+
+                  if (actions) {
+                    for (const action of actions) {
+                      actionsLabels.push(await action.label());
+                    }
+                  }
 
                   let prohibitionSentence = "";
 
@@ -303,116 +355,17 @@ export default async function parsePolicy(input: string, language = "english") {
                 policyTranslation.permissions = permissionsSentences;
                 policyTranslation.prohibitions = prohibitionsSentences;
 
-                resolve(policyTranslation);
+                policies.push(policyTranslation);
               }
+
+              resolve(policies);
             }
-          );
-        }
-        /*}
           }
-        );*/
+        );
       }
     })();
   });
 }
-
-/*
-function getAllPermissions(
-  permissionsTriples: Array<$rdf.Statement>,
-  kb: $rdf.Formula
-) {
-  const permissions: Array<{
-    targets: Array<$rdf.Statement>;
-    actions: Array<$rdf.Statement> | undefined;
-    assigner: $rdf.Statement | undefined;
-    assignee: $rdf.Statement | undefined;
-    duties: Array<$rdf.Statement> | undefined;
-    constraints: $rdf.Statement | undefined;
-  }> = [];
-
-  permissionsTriples.forEach((permissionTriple) => {
-    permissions.push({
-      targets: kb.statementsMatching(
-        permissionTriple.object as any,
-        ODRL("target"),
-        undefined
-      ),
-      actions: kb.statementsMatching(
-        permissionTriple.object as any,
-        ODRL("action"),
-        undefined
-      ),
-      assigner: kb.statementsMatching(
-        permissionTriple.object as any,
-        ODRL("assigner"),
-        undefined
-      )[0],
-      assignee: kb.statementsMatching(
-        permissionTriple.object as any,
-        ODRL("assignee"),
-        undefined
-      )[0],
-      duties: kb.statementsMatching(
-        permissionTriple.object as any,
-        ODRL("duty"),
-        undefined
-      ),
-      constraints: kb.statementsMatching(
-        permissionTriple.object as any,
-        ODRL("constraint"),
-        undefined
-      )[0],
-    });
-  });
-
-  return permissions;
-}
-
-function getAllProhibitions(
-  prohibitionsTriples: Array<$rdf.Statement>,
-  kb: $rdf.Formula
-) {
-  const prohibitions: Array<{
-    targets: Array<$rdf.Statement>;
-    actions: Array<$rdf.Statement> | undefined;
-    assigner: $rdf.Statement | undefined;
-    assignee: $rdf.Statement | undefined;
-    remedies: Array<$rdf.Statement> | undefined;
-  }> = [];
-
-  prohibitionsTriples.forEach((prohibitionTriple) => {
-    prohibitions.push({
-      targets: kb.statementsMatching(
-        prohibitionTriple.object as any,
-        ODRL("target"),
-        undefined
-      ),
-      actions: kb.statementsMatching(
-        prohibitionTriple.object as any,
-        ODRL("action"),
-        undefined
-      ),
-      assigner: kb.statementsMatching(
-        prohibitionTriple.object as any,
-        ODRL("assigner"),
-        undefined
-      )[0],
-      assignee:
-        kb.statementsMatching(
-          prohibitionTriple.object as any,
-          ODRL("assignee"),
-          undefined
-        )[0] ?? undefined,
-      remedies: kb.statementsMatching(
-        prohibitionTriple.object as any,
-        ODRL("remedy"),
-        undefined
-      ),
-    });
-  });
-
-  return prohibitions;
-}*/
 
 async function getStore(urls: Array<string>) {
   const store = $rdf.graph();
@@ -436,76 +389,34 @@ async function parseConstraint(constraint: Constraint, kb: $rdf.Formula) {
     const operator = constraint.operator;
 
     if (operator) {
-      const rightOperand = constraint.rightOperand;
+      const rightOperands = constraint.rightOperands;
 
-      if (rightOperand) {
-        const rightOperandDatatype = constraint.dataType;
+      if (rightOperands.length > 0) {
+        const operatorSentence = getSentence(operator.object.value);
 
-        if (rightOperandDatatype) {
-          if (XSDNumericTypes.includes(rightOperandDatatype.value)) {
-            permissionSentence += constraint.leftOperandLabel;
-          }
+        let leftOperandLabel = await constraint.leftOperandLabel();
 
-          const isDuration = [
-            ODRL("timeInterval").value,
-            ODRL("delayPeriod").value,
-          ].includes(leftOperand.object.value);
+        const isDuration = [
+          ODRL("timeInterval").value,
+          ODRL("delayPeriod").value,
+          ODRL("elapsedTime").value,
+          ODRL("meteredTime").value,
+        ].includes(leftOperand.object.value);
 
-          if (isDuration) {
-            permissionSentence +=
-              " " +
-              getSentence(rightOperandDatatype.value)[leftOperand.object.value][
-                operator.object.value
-              ];
-          } else {
-            const leftOperandLabel = getSentenceOrLabel(
-              leftOperand,
-              kb
-            ).toLocaleLowerCase();
-            const rightOperandSentence = getSentence(
-              rightOperandDatatype.value
-            );
-            const operatorSentence = getSentence(operator.object.value);
+        if (isDuration) {
+          leftOperandLabel = interpolate(leftOperandLabel, {
+            rule: constraint.rule.type,
+            action: listToString(await constraint.rule.getActionLabels()),
+          });
 
-            permissionSentence += "";
-
-            /**
-             * If the right operand sentence is defined, we grab it.
-             * Otherwise, fallback to the following sentence: "...with [leftOperand] [operator]..."
-             */
-            /*permissionSentence += rightOperandSentence
-              ? rightOperandSentence[operator.object.value]
-              : ` with ${leftOperandLabel} ${operatorSentence}`;*/
-
-            permissionSentence += `${constraint.leftOperandLabel} ${operatorSentence}`;
-          }
-
-          permissionSentence += " ";
-
-          const isRightOperandUrl = isValidUrl(rightOperand.object.value);
-
-          if (isRightOperandUrl) {
-            const labelTriple = (
-              await fetchUrl(rightOperand.object.value)
-            )?.statementsMatching(
-              $rdf.Namespace(rightOperand.object.value)(""),
-              RDFS("label"),
-              undefined
-            );
-
-            if (labelTriple && labelTriple.length > 0) {
-              permissionSentence += labelTriple[0].object.value;
-            }
-          } else {
-            permissionSentence += isDuration
-              ? parseXSDDuration(rightOperand.object.value)
-              : rightOperand.object.value;
-            permissionSentence +=
-              leftOperand.object.value === ODRL("percentage").value ? "%" : "";
-          }
+          permissionSentence += leftOperandLabel;
         } else {
+          permissionSentence += `${leftOperandLabel} ${operatorSentence}`;
         }
       }
+
+      permissionSentence += " ";
+      permissionSentence += await constraint.rightOperandLabels();
     }
   }
 
@@ -541,12 +452,13 @@ async function parseDuty(
 
   if (duty.actions && duty.actions.length > 0) {
     for (const action of duty.actions) {
+      const actionLabel = await action.label();
       const toPreposition = [];
 
-      if (action.uri !== ODRL("grantUse").value) {
-        actionsLabels.push(action.label?.toLocaleLowerCase());
+      if (action.iri !== ODRL("grantUse").value) {
+        actionsLabels.push(actionLabel);
       } else {
-        toPreposition.push(action.label?.toLocaleLowerCase());
+        toPreposition.push(actionLabel);
       }
 
       dutySentence += listToString(actionsLabels);
@@ -579,12 +491,12 @@ async function parseDuty(
         for (const refinement of actionRefinements) {
           const leftOperand = refinement.leftOperand;
           const oeprator = refinement.operator;
-          const rightOperand = refinement.rightOperand;
+          const rightOperands = refinement.rightOperands;
           const unit = refinement.unit;
 
-          if ([ODRL("compensate").value].includes(action.uri)) {
+          if ([ODRL("compensate").value].includes(action.iri)) {
             if (dutyAssigners && dutyAssigners.length > 0) {
-              dutySentence += `the data controller(s) defined as ${listToString(
+              dutySentence += `the policy issuer(s) defined as ${listToString(
                 dutyAssigners.map((assigner) => lastURISegment(assigner)!)
               )}`;
             } else {
@@ -598,26 +510,22 @@ async function parseDuty(
             if (
               parent.functions
                 .get("assigner")
-                ?.sources.includes(rightOperand.object.value)
+                ?.sources.filter((assigner) =>
+                  rightOperands.map((ro) => ro.value).includes(assigner)
+                ).length! > 0
             ) {
               dutySentence += "him/them";
-            } else {
-              dutySentence += getSentence(leftOperand.object.value)[
-                oeprator.object.value
-              ];
-
-              dutySentence += ` ${rightOperand.object.value}`;
             }
-          } else {
-            dutySentence += getSentence(leftOperand.object.value)[
-              oeprator.object.value
-            ];
-
-            dutySentence += ` ${rightOperand.object.value}`;
           }
 
+          dutySentence += getSentence(leftOperand.object.value)[
+            oeprator.object.value
+          ];
+
+          dutySentence += ` ${await refinement.rightOperandLabels()}`;
+
           if (unit) {
-            const unitStore = await fetchUrl(unit.object.value);
+            const unitStore = await fetchIRI(unit.object.value);
 
             const labels = unitStore?.statementsMatching(
               new $rdf.NamedNode(unit.object.value),
@@ -650,7 +558,7 @@ async function parseDuty(
 
       const operator = constraint.operator;
 
-      const rightOperand = constraint.rightOperand;
+      const rightOperands = constraint.rightOperands;
 
       let dutyConstraintSentence = "The ";
       dutyConstraintSentence += listToString(actionsLabels);
@@ -663,10 +571,9 @@ async function parseDuty(
 
       dutyConstraintSentence += leftOperandTranslationObject
         ? leftOperandTranslationObject[operator.object.value]
-        : getLabel(leftOperand, kb)?.toLocaleLowerCase();
+        : await getSentenceOrLabel(leftOperand, kb);
       dutyConstraintSentence += " ";
-      dutyConstraintSentence +=
-        getSentenceOrLabel(rightOperand, kb) ?? rightOperand.object.value;
+      dutyConstraintSentence += await constraint.rightOperandLabels();
 
       if (leftOperand.object.value === ODRL("percentage").value) {
         dutyConstraintSentence += "%";
@@ -703,14 +610,6 @@ function parseTargets(targets: Array<$rdf.Statement>, kb: $rdf.Formula) {
   }
 
   return listToString(targetsSentences);
-}
-
-function getSentenceOrLabel(triple: $rdf.Statement, kb: $rdf.Formula) {
-  return getSentence(triple.object.value) ?? getLabel(triple, kb);
-}
-
-function listToString(list: Array<string>) {
-  return list.join(", ").replace(/, ([^,]*)$/, " and $1");
 }
 
 function lastURISegment(uri: string) {

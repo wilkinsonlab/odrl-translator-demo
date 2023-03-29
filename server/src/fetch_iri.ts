@@ -1,30 +1,36 @@
 import * as $rdf from "rdflib";
 import fetch from "node-fetch";
 
-export default async function fetchUrl(
-  url: string
+import { isValidUrl } from "./utils.js";
+
+export default async function fetchIRI(
+  iri: string
 ): Promise<$rdf.Formula | null> {
+  if (!isValidUrl(iri)) {
+    return null;
+  }
+
   return new Promise((resolve, reject) => {
     (async () => {
       const store = $rdf.graph();
 
       const regex = new RegExp("ICO_|NCIT_|HP_|UBERON_|MP_|SYMP_|SIO_", "g");
-      const phenotype = url.match(regex);
+      const phenotype = iri.match(regex);
 
-      let _url = url;
+      let _iri = iri;
       let response = null;
 
       if (phenotype && phenotype.length > 0) {
-        _url = `https://ontobee.org/ontology/${phenotype[0].replace(
+        _iri = `https://ontobee.org/ontology/${phenotype[0].replace(
           "_",
           ""
-        )}?iri=${url}`;
+        )}?iri=${iri}`;
       }
 
-      response = await fetch(_url, {
+      response = await fetch(_iri, {
         headers: {
-          Accept: "text/turtle"
-        }
+          Accept: "text/turtle",
+        },
       });
 
       if (response) {
@@ -36,7 +42,7 @@ export default async function fetchUrl(
         $rdf.parse(
           await response.text(),
           store,
-          url,
+          iri,
           contentType === "text/xml" ? "application/rdf+xml" : contentType,
           (err, kb) => {
             if (err) {

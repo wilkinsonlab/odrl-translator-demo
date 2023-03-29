@@ -59,7 +59,11 @@ export default class Party {
   }
 
   #setSources() {
-    if (isValidUrl(this.statement.object.value)) {
+    const object = this.statement.object;
+    const nextTriple = this.#statementsMatcher.subject(object).execute();
+
+    // The object's value can be a subject for another triple.
+    if (!nextTriple && isValidUrl(this.statement.object.value)) {
       this.#sources = [this.statement.object.value];
     } else {
       const sources = this.#statementsMatcher

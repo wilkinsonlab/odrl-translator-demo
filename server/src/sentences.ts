@@ -1,10 +1,18 @@
-import * as $rdf from "rdflib";
+import { interpolate } from "@poppinss/utils/build/helpers.js";
 
 import { ODRL, XSD, OCCE } from "./namespaces.js";
 import numericTypes from "./numeric_types.js";
 import dateTypes from "./date_types.js";
+import { isValidUrl } from "./utils.js";
 
-export default function getSentence(key: string): any {
+export default function getSentence(
+  key: string,
+  args?: Record<string, string>
+) {
+  if (!isValidUrl(key)) {
+    return;
+  }
+
   const sentences: Record<string, unknown> = {
     [ODRL("Policy").value]:
       "This is a policy that assigns rules that apply generically",
@@ -19,6 +27,7 @@ export default function getSentence(key: string): any {
     },
     [ODRL("grantUse").value]: "grant the use to",
     [ODRL("policyUsage").value]: "the rule is exercised",
+    [ODRL("isA").value]: "must be of type",
     [ODRL("lt").value]: "lesser than",
     [ODRL("lteq").value]: "lesser than or equal to",
     [ODRL("eq").value]: "equals to",
@@ -53,15 +62,17 @@ export default function getSentence(key: string): any {
       [ODRL("gt").value]: "after",
       [ODRL("gteq").value]: "from",
     },
-    [XSD("duration").value]: {
-      [ODRL("timeInterval").value]: {
-        [ODRL("eq").value]: "on an interval of",
-      },
-      [ODRL("delayPeriod").value]: {
-        [ODRL("eq").value]: "with a delay of",
-        [ODRL("gt").value]: "with a delay superior to",
-        [ODRL("gteq").value]: "with a delay superior or equal to",
-      },
+    [ODRL("timeInterval").value]: {
+      [ODRL("eq").value]:
+        "The recurring period of time before the next execution of the {{ action }} of the {{ rule }} is",
+    },
+    [ODRL("delayPeriod").value]: {
+      [ODRL("eq").value]:
+        "The time delay period prior to exercising the {{ action }} of the {{ rule }} is",
+      [ODRL("gt").value]:
+        "The time delay period prior to exercising the {{ action }} of the {{ rule }} is superior to",
+      [ODRL("gteq").value]:
+        "The time delay period prior to exercising the {{ action }} of the {{ rule }} is superior or equal to",
     },
     [XSD("string").value]: {
       [ODRL("eq").value]: "a",
@@ -93,5 +104,9 @@ export default function getSentence(key: string): any {
     };
   });
 
-  return sentences[key!] as any;
+  const sentence = sentences[key];
+
+  return typeof sentence === "string"
+    ? interpolate(sentence, args)
+    : (sentence as any);
 }

@@ -4,7 +4,7 @@
   "description": "Translate ODRL policies to narrative language",
   "main": "index.js",
   "scripts": {
-    "test": "tsx bin/test.ts",
+    "test": "node --loader=ts-node/esm bin/test.ts",
     "build": "npx tsc",
     "start": "node dist/index.js",
     "dev": "concurrently \"npx tsc --watch\" \"nodemon -q dist/index.js\""
@@ -12,14 +12,20 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@comake/rmlmapper-js": "^0.1.8",
+    "@poppinss/utils": "^5.0.0",
+    "@rmlio/rmlmapper-java-wrapper": "^2.0.3",
+    "@rmlio/yarrrml-parser": "^1.4.0",
     "body-parser": "^1.20.1",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "jsonld": "^8.1.0",
+    "n3": "^1.16.3",
     "node-fetch": "^3.3.0",
     "parse-xsd-duration": "^0.5.0",
     "rdflib": "^2.2.21",
     "reverso-api": "^2.22.2",
+    "rocketrml": "^2.1.2",
     "xmldom": "^0.6.0",
     "xmlhttprequest": "^1.8.0"
   },

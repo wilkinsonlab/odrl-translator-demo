@@ -1,8 +1,8 @@
 import * as $rdf from "rdflib";
 
+import Rule from "./rule.js";
 import { RDF, ODRL } from "./namespaces.js";
-import { getLabel } from "./utils.js";
-import getSentence from "./sentences.js";
+import { getSentenceOrLabel, isValidUrl } from "./utils.js";
 import StatementsMatcher from "./statements_matcher.js";
 import Constraint from "./constraint.js";
 
@@ -19,7 +19,11 @@ export default class Action {
 
   /**************************** CONSTRUCTOR *****************************/
 
-  constructor(private kb: $rdf.Formula, private statement: $rdf.Statement) {
+  constructor(
+    private kb: $rdf.Formula,
+    private statement: $rdf.Statement,
+    private rule: Rule
+  ) {
     this.#statementsMatcher = new StatementsMatcher(this.kb);
 
     this.#setRefinements();
@@ -27,20 +31,20 @@ export default class Action {
 
   /****************************** GETTERS ******************************/
 
-  public get label(): string {
-    return (
-      getLabel(this.#getActionURIStatement(), this.kb) || getSentence(this.uri)
-    );
-  }
-
-  public get uri() {
-    return this.#getActionURIStatement().object.value;
+  public get iri() {
+    return this.#getActionIRIStatement().object.value;
   }
 
   public get isObject() {
-    const regex = new RegExp("\\_\\:b\\d+");
+    if (isValidUrl(this.statement.object.value)) {
+      const triples = this.#statementsMatcher
+        .subject(this.statement.object)
+        .execute();
 
-    return regex.test(this.statement.object.value);
+      return triples && triples.length > 0;
+    }
+
+    return false;
   }
 
   public get refinements() {
@@ -49,11 +53,17 @@ export default class Action {
 
   /****************************** METHODS ******************************/
 
+  public async label(): Promise<string> {
+    return (
+      await getSentenceOrLabel(this.#getActionIRIStatement(), this.kb)
+    )[0].toLowerCase();
+  }
+
   /**
    * If the action is an object, get the object by its reference.
    * Otherwise, use the action as it is.
    */
-  #getActionURIStatement() {
+  #getActionIRIStatement() {
     let statement = this.statement;
 
     if (this.isObject) {
@@ -78,7 +88,7 @@ export default class Action {
 
     if (refinements && refinements.length > 0) {
       refinements.forEach((duty) => {
-        this.#refinements.push(new Constraint(this.kb, duty));
+        this.#refinements.push(new Constraint(this.kb, duty, this.rule));
       });
     }
   }

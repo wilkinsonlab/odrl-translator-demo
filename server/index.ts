@@ -15,7 +15,7 @@ const port = 3000;
 
 app.use(
   cors({
-    origin: "http://127.0.0.1:5173",
+    origin: "http://localhost:5173",
   })
 );
 app.use(express.json());
@@ -23,7 +23,7 @@ app.use(express.json());
 app.post("/translate", async (req, res) => {
   const response = await parsePolicy(req.body.policy, req.body.language);
   console.dir(response, { depth: null });
-  res.send(response);
+  res.send({ policies: response });
 });
 
 app.listen(port, () => {

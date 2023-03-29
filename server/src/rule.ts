@@ -21,7 +21,7 @@ export default class Rule {
   /**
    * The actions of the rule.
    */
-  protected _actions?: Array<Action>;
+  protected _actions: Array<Action>;
 
   /**
    * The targets of the rule.
@@ -43,7 +43,7 @@ export default class Rule {
   constructor(
     protected kb: $rdf.Formula,
     protected statement: $rdf.Statement,
-    protected type: RuleType
+    protected _type: RuleType
   ) {
     this.statementsMatcher = new StatementsMatcher(this.kb);
 
@@ -66,7 +66,21 @@ export default class Rule {
     return this._functions;
   }
 
+  public get type() {
+    return this._type;
+  }
+
   /****************************** METHODS ******************************/
+
+  public async getActionLabels() {
+    const actionsLabels = [];
+
+    for (const action of this._actions) {
+      actionsLabels.push(await action.label());
+    }
+
+    return actionsLabels;
+  }
 
   #setActions() {
     const result = this.statementsMatcher
@@ -75,10 +89,12 @@ export default class Rule {
       .execute();
 
     if (result) {
-      this._actions = result.map((statement) => new Action(this.kb, statement));
+      this._actions = result.map(
+        (statement) => new Action(this.kb, statement, this)
+      );
     } else {
       throw new Exception(
-        `An action must be defined in the ${this.type}`,
+        `At least one action must be defined in the ${this.type}`,
         500,
         "E_NO_ACTION_DEFINED"
       );

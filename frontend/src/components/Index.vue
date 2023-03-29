@@ -1,20 +1,24 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
+type Result = {
+  policies: Array<{
+    description: string;
+    permissions?: Array<{
+      sentence: string;
+      constraints?: Array<{ sentence: string }>;
+      duties?: Array<{ sentence: string; constraints: Array<string> }>;
+    }>;
+    prohibitions?: Array<{
+      sentence: string;
+      remedies?: Array<{ sentence: string }>;
+    }>
+  }>;
+}
+
 const input = ref("");
 const language = ref("english");
-const result = ref<{
-  description: string;
-  permissions?: Array<{
-    sentence: string;
-    constraints?: Array<{ sentence: string }>;
-    duties?: Array<{ sentence: string; constraints: Array<string> }>;
-  }>;
-  prohibitions?: Array<{
-    sentence: string;
-    remedies?: Array<{ sentence: string }>;
-  }>;
-} | null>(null);
+const results = ref<Result | null>(null);
 const isLoading = ref(false);
 
 function replaceURLByLink(text: string) {
@@ -25,7 +29,7 @@ function replaceURLByLink(text: string) {
 }
 
 async function onSubmit() {
-  result.value = null;
+  results.value = null;
   isLoading.value = true;
 
   try {
@@ -42,7 +46,7 @@ async function onSubmit() {
 
     isLoading.value = false;
 
-    result.value = await response.json();
+    results.value = await response.json();
   } catch {
     isLoading.value = false;
   }
@@ -71,22 +75,24 @@ async function onSubmit() {
       </div>
     </div>
     <div class="result-container">
+      <p class="loading" v-if="isLoading">Translating</p>
+
       <div
         class="result"
         :dir="['arabic', 'hebrew'].includes(language) ? 'rtl' : 'ltr'"
+        v-for="(policy, index) in results?.policies"
+        :key="index"
       >
-        <p class="loading" v-if="isLoading">Translating</p>
-
-        <template v-if="result">
+        <template v-if="policy">
           <h3 class="blue">Policy description</h3>
-          <p v-html="replaceURLByLink(result.description)"></p>
+          <p v-html="replaceURLByLink(policy.description)"></p>
 
-          <template v-if="result.permissions && result.permissions.length > 0">
+          <template v-if="policy.permissions && policy.permissions.length > 0">
             <h3 class="green">Permissions</h3>
 
             <ul>
               <li
-                v-for="(permission, index) in result.permissions"
+                v-for="(permission, index) in policy.permissions"
                 :key="index"
               >
                 <span
@@ -163,12 +169,12 @@ async function onSubmit() {
           </template>
 
           <template
-            v-if="result.prohibitions && result.prohibitions.length > 0"
+            v-if="policy.prohibitions && policy.prohibitions.length > 0"
           >
             <h3 class="red">Prohibitions</h3>
             <ul>
               <li
-                v-for="(prohibition, index) in result.prohibitions"
+                v-for="(prohibition, index) in policy.prohibitions"
                 :key="index"
               >
                 <span
@@ -225,6 +231,7 @@ async function onSubmit() {
 
 .result-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   margin-left: 50px;
   text-align: justify;

@@ -48,7 +48,7 @@ export default class Permission extends Rule {
 
     if (constraints && constraints.length > 0) {
       constraints.forEach((constraint) => {
-        this.#constraints.push(new Constraint(this.kb, constraint));
+        this.#constraints.push(new Constraint(this.kb, constraint, this));
       });
     }
   }
