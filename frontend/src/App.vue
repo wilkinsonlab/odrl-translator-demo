@@ -5,12 +5,7 @@ import IndexVue from "./components/Index.vue";
 </script>
 
 <template>
-  <Suspense>
-    <template #default><IndexVue /></template>
-    <template #fallback>
-      <span>Loading...</span>
-    </template>
-  </Suspense>
+  <router-view />
 </template>
 
 <style scoped></style>
