@@ -21,7 +21,7 @@ const tabs = reactive([
 const reference = ref(null);
 
 const rules = ref([markRaw(PolicyRule)]);
-const { policy, onDone, done } = usePolicy();
+const { policy, onDone, done, policies } = usePolicy();
 
 function onReferenceEnter() {
   policy.references.push(reference.value);
@@ -116,9 +116,9 @@ function removeRule(index: number) {
       </template>
     </Steppy>
 
-    <pre v-if="done">
-      {{ policy }}
-    </pre>
+    <p v-if="done" style="white-space: pre; font-family: monospace;">
+      {{ JSON.stringify(policies, null, 4) }}
+    </p>
   </section>
 </template>
 

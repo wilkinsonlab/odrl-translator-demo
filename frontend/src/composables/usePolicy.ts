@@ -4,6 +4,10 @@ import { ref, reactive, computed } from "vue";
 import useGetRandomID from "./useGetRandomID";
 import { ODRL } from "../../../server/src/namespaces";
 
+const policies = ref({
+  policies: [] as any
+});
+
 const policy = reactive({
   id: useGetRandomID(),
   type: ODRL("Set").value,
@@ -17,6 +21,8 @@ const policy = reactive({
   references: [] as Array<any>
 });
 
+policies.value.policies.push(policy);
+
 const done = ref(false);
 
 function onDone() {
@@ -28,7 +34,8 @@ export default (function () {
     return {
       policy,
       onDone,
-      done
+      done,
+      policies
     };
   };
 })();
