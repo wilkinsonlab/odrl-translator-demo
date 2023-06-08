@@ -1,6 +1,6 @@
-import type { Permission, Prohibition } from "../types";
+import type { Obligation, Permission, Prohibition } from "../types";
 
-import { ref, reactive, markRaw } from "vue";
+import { ref, reactive, markRaw, unref, type Ref } from "vue";
 import useGetRandomID from "./useGetRandomID";
 import usePolicy from "./usePolicy";
 import { ODRL } from "../../../server/src/namespaces";
@@ -11,42 +11,66 @@ import Constraint from "../components/Constraint.vue";
 import Consequence from "../components/Consequence.vue";
 
 export interface Props {
-  parent?: Permission | Prohibition;
+  //parent?: Permission | Prohibition;
   parentType?: "permission" | "prohibition";
+  //obligation?: Obligation;
   allowConsequences?: boolean;
   data?: Record<string, any>;
 }
 
 const { policy } = usePolicy();
 
-export function useObligation({
-  parent,
-  parentType,
-  allowConsequences,
-  data
-}: Props) {
+export function useObligation(
+  {
+    //parent,
+    parentType,
+    //obligation: initialObligation,
+    allowConsequences,
+    data
+  }: Props,
+  parent?: Ref<Permission | Prohibition | undefined>,
+  initialObligation?: Ref<Obligation | undefined>
+) {
   const targets = ref([markRaw(Target)]);
-  const actions = ref([markRaw(Action)]);
+  const actions = ref(
+    initialObligation?.value
+      ? new Array(initialObligation?.value?.actions.length).fill(
+          markRaw(Action)
+        )
+      : [markRaw(Action)]
+  );
   const assignees = ref<Array<typeof Assignee>>([]);
   const constraints = ref<Array<typeof Constraint>>([]);
   const consequences = ref<Array<typeof Consequence>>([]);
 
-  const obligation = reactive({
-    id: useGetRandomID(),
-    policy_id: policy.id,
-    targets: [],
-    actions: [],
-    assigner: null,
-    assignees: [],
-    constraints: [],
-    ...data,
-    ...(allowConsequences ? { consequences: [] } : {})
-  });
+  const obligation = reactive(
+    unref(initialObligation) ?? {
+      id: useGetRandomID(),
+      policy_id: policy.id,
+      targets: [],
+      actions: [],
+      assigner: null,
+      assignees: [],
+      constraints: [],
+      operand: null,
+      first: null,
+      logical_constraints: {
+        and: [],
+        or: [],
+        andSequence: [],
+        xone: []
+      },
+      ...data,
+      ...(allowConsequences ? { consequences: [] } : {})
+    }
+  );
 
-  if (parentType === "permission") {
-    (parent as Permission).duties.push(obligation as any);
-  } else if (parentType === "prohibition") {
-    (parent as Prohibition).remedies.push(obligation as any);
+  if (!initialObligation?.value && parent?.value) {
+    if (parentType === "permission") {
+      (parent.value as Permission).duties.push(obligation as any);
+    } else if (parentType === "prohibition") {
+      (parent.value as Prohibition).remedies.push(obligation as any);
+    }
   }
 
   function addTarget() {

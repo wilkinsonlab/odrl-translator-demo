@@ -1,7 +1,22 @@
+import type { Ref } from "vue";
+
 export enum RuleType {
   PERMISSION = "http://www.w3.org/ns/odrl/2/permission",
   PROHIBITION = "http://www.w3.org/ns/odrl/2/prohibition",
   OBLIGATION = "http://www.w3.org/ns/odrl/2/obligation"
+}
+
+export type Operands = "xone" | "or" | "and" | "andSequence";
+
+interface HasLogicalConstraint {
+  first: number | null;
+  operand: "xone" | "andSequence" | "and" | "or" | null;
+  logical_constraints: {
+    xone: [];
+    andSequence: [];
+    and: [];
+    or: [];
+  };
 }
 
 export interface Policy {
@@ -16,21 +31,38 @@ export interface Policy {
   };
 }
 
+export type RightOperandValueType =
+  | "iri"
+  | "date"
+  | "dateTime"
+  | "string"
+  | "float"
+  | "duration";
+
 export interface Constraint {
-  left_operand: string;
-  operator: string;
+  id: number;
+  policy_id: number;
+  rule_id: number;
+  action_id?: number;
+  duty_id?: number;
+  left_operand: Ref<string | undefined>;
+  operator: Ref<string | undefined>;
+  valueType: Ref<string>;
   right_operand_value_iri?: string;
   right_operand_value_string?: string;
   right_operand_value_date?: string;
   right_operand_value_dateTime?: string;
   right_operand_value_float?: number;
   right_operand_value_duration?: string;
-  unit: string | null;
+  unit: Ref<string | undefined>;
+  next: number | "null";
 }
 
-export interface Rule {
+export interface Rule extends HasLogicalConstraint {
   id: number;
+  type: string;
   policy_id: number;
+  cce: string;
   actions: Array<Action>;
   targets: Array<Target>;
   assigner?: string | null;
@@ -63,7 +95,7 @@ export interface Duty extends Obligation {
   rule_id: number;
 }
 
-export interface Target {
+export interface Target extends HasLogicalConstraint {
   id: number;
   policy_id: number;
   rule_id: number;
@@ -73,7 +105,7 @@ export interface Target {
   refinements: Array<Constraint>;
 }
 
-export interface Assignee {
+export interface Assignee extends HasLogicalConstraint {
   id: number;
   policy_id: number;
   rule_id: number;
@@ -83,11 +115,12 @@ export interface Assignee {
   refinements: Array<Constraint>;
 }
 
-export interface Action {
+export interface Action extends HasLogicalConstraint {
   id: number;
   policy_id: number;
   rule_id: number;
   value: string;
+  context?: string;
   refinements?: Array<Constraint>;
 }
 

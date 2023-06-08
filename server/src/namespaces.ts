@@ -11,3 +11,4 @@ export const SKOS = $rdf.Namespace("http://www.w3.org/2004/02/skos/core#");
 export const GREL = $rdf.Namespace(
   "http://users.ugent.be/~bjdmeest/function/grel.ttl#"
 );
+export const DCE = $rdf.Namespace("http://purl.org/dc/elements/");

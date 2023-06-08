@@ -14,6 +14,7 @@ import Prohibition from "./prohibition.js";
 import Duty from "./duty.js";
 import Constraint from "./constraint.js";
 import { interpolate } from "@poppinss/utils/build/helpers.js";
+import Asset from "./asset.js";
 
 type PermissionType = {
   sentence: string;
@@ -131,7 +132,9 @@ export default async function parsePolicy(
 
                   if (actions) {
                     for (const action of actions!) {
-                      actionsLabels.push(await action.label());
+                      actionsLabels.push(
+                        (await action.label()) + " " + (action.context ?? "")
+                      );
 
                       if (action.refinements.length > 0) {
                         for (const refinement of action.refinements) {
@@ -189,7 +192,7 @@ export default async function parsePolicy(
                       ...actionsRefinementsSetnences
                     );
                   } else {
-                    permissionSentence += " without any constraint.";
+                    //permissionSentence += " without any constraint.";
                   }
 
                   if (language !== "english") {
@@ -248,18 +251,13 @@ export default async function parsePolicy(
                   for (const target of targets!) {
                     let sentence = "the ";
 
-                    const targetType = kb.statementsMatching(
-                      target?.object as any,
-                      RDF("type"),
-                      undefined
-                    )[0];
+                    const targetType = target.type;
 
                     sentence +=
-                      targetType &&
-                      targetType.object.value === ODRL("AssetCollection").value
+                      targetType && targetType === ODRL("AssetCollection").value
                         ? "collection of assets"
                         : "asset";
-                    sentence += ` located at ${target?.object.value}`;
+                    sentence += ` located at ${target.url}`;
 
                     targetsSentences.push(sentence);
                   }
@@ -442,10 +440,9 @@ async function parseDuty(
 
   if (remedy) {
     dutySentence +=
-      "If this prohibition has been infringed by being exercised, the assignee must";
+      "If this prohibition has been infringed by being exercised, the following consequences apply: ";
   } else {
-    dutySentence +=
-      "The assignee has a duty toward the data controller(s) and must";
+    dutySentence += `A duty must be fulfilled to execute the action(s) of the ${parent.type}: `;
   }
 
   dutySentence += " ";
@@ -468,6 +465,7 @@ async function parseDuty(
       }
 
       dutySentence += " ";
+      dutySentence += `${action.context} ` ?? "";
 
       if (dutyTargets && dutyTargets.length > 0) {
         dutySentence += `${parseTargets(dutyTargets, kb)}`;
@@ -490,7 +488,7 @@ async function parseDuty(
       if (actionRefinements && actionRefinements.length > 0) {
         for (const refinement of actionRefinements) {
           const leftOperand = refinement.leftOperand;
-          const oeprator = refinement.operator;
+          const operator = refinement.operator;
           const rightOperands = refinement.rightOperands;
           const unit = refinement.unit;
 
@@ -518,9 +516,9 @@ async function parseDuty(
             }
           }
 
-          dutySentence += getSentence(leftOperand.object.value)[
-            oeprator.object.value
-          ];
+          dutySentence += getSentence(leftOperand.object.value)
+            ? getSentence(leftOperand.object.value)[operator.object.value]
+            : getSentence(operator.object.value);
 
           dutySentence += ` ${await refinement.rightOperandLabels()}`;
 
@@ -586,7 +584,7 @@ async function parseDuty(
   return _duty;
 }
 
-function parseTargets(targets: Array<$rdf.Statement>, kb: $rdf.Formula) {
+function parseTargets(targets: Array<Asset>, kb: $rdf.Formula) {
   const targetsSentences = [];
 
   for (const target of targets!) {
@@ -594,17 +592,13 @@ function parseTargets(targets: Array<$rdf.Statement>, kb: $rdf.Formula) {
     /**
      * Useful to know if it's a collection of assets or not.
      */
-    const targetType = kb.statementsMatching(
-      target?.object as any,
-      RDF("type"),
-      undefined
-    )[0];
+    const targetType = target.type;
 
     sentence +=
-      targetType && targetType.object.value === ODRL("AssetCollection").value
+      targetType && targetType === ODRL("AssetCollection").value
         ? "collection of assets"
         : "asset";
-    sentence += ` located at ${target?.object.value}`;
+    sentence += ` located at ${target.url}`;
 
     targetsSentences.push(sentence);
   }

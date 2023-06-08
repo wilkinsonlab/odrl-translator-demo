@@ -1,54 +1,80 @@
 <script setup lang="ts">
-import type { Action, Rule, Target, Assignee } from "../types";
+import type {
+  Action,
+  Rule,
+  Target,
+  Assignee,
+  Constraint,
+  RightOperandValueType
+} from "../types";
 
 import { ref, reactive, watch, unref } from "vue";
 import { ODRL } from "../../../server/src/namespaces";
 import useGetRandomID from "../composables/useGetRandomID";
+import usePolicy from "../composables/usePolicy";
 import leftOperands from "../shared/leftOperands";
 import operators from "../shared/operators";
 
 const props = defineProps<{
-  parent: Target | Action | Assignee | Rule;
-  constraintKey: string;
   additionalData?: Record<string, any>;
 }>();
+const initialConstraint = defineModel<Constraint>("constraint");
+const parentConstraints = defineModel<Array<Constraint>>("parentConstraints", {
+  required: true
+});
 
 const valueTypes = ["iri", "date", "dateTime", "string", "float", "duration"];
 
-const leftOperand = ref();
-const operator = ref();
-const valueType = ref<
-  "iri" | "date" | "dateTime" | "string" | "float" | "duration"
->("iri");
-const rightOperand = ref();
-const unit = ref(null);
+const leftOperand = ref(initialConstraint?.value?.left_operand);
+const operator = ref(initialConstraint?.value?.operator);
+const valueType = ref(initialConstraint?.value?.valueType ?? "iri");
+const rightOperand = ref(
+  initialConstraint?.value
+    ? (initialConstraint.value[
+        `right_operand_value_${valueType.value as RightOperandValueType}`
+      ] as RightOperandValueType)
+    : undefined
+);
+const unit = ref(initialConstraint?.value?.unit);
 
-const constraint = reactive({
-  id: useGetRandomID(),
-  policy_id: props.parent.policy_id,
-  ...(props.additionalData ? props.additionalData : {}),
-  left_operand: leftOperand,
-  operator,
-  right_operand_value_iri: null,
-  right_operand_value_string: null,
-  right_operand_value_duration: null,
-  right_operand_value_date: null,
-  right_operand_value_dateTime: null,
-  right_operand_value_float: null,
-  unit
-});
+if (initialConstraint?.value) {
+  initialConstraint.value.left_operand = leftOperand;
+  initialConstraint.value.operator = operator;
+  initialConstraint.value.unit = unit;
+  initialConstraint.value.valueType = valueType;
+  initialConstraint.value[
+    `right_operand_value_${valueType.value as RightOperandValueType}`
+  ] = rightOperand;
+}
+
+const constraint = reactive(
+  unref(initialConstraint) ?? {
+    id: useGetRandomID(),
+    policy_id: usePolicy().policy.id,
+    left_operand: leftOperand,
+    operator,
+    valueType,
+    right_operand_value_iri: null,
+    right_operand_value_string: null,
+    right_operand_value_duration: null,
+    right_operand_value_date: null,
+    right_operand_value_dateTime: null,
+    right_operand_value_float: null,
+    unit,
+    ...(props.additionalData ? props.additionalData : {})
+  }
+);
 
 watch(
   [leftOperand, operator, rightOperand],
   ([newLeftOperand, newOperator, newRightOperand]) => {
-    const index = props.parent[props.constraintKey].findIndex(
+    const index = parentConstraints.value.findIndex(
       (_constraint: any) => _constraint.id === constraint.id
     );
 
     if (index < 0) {
       if (newLeftOperand && newOperator && newRightOperand != null) {
-        // @ts-ignore
-        props.parent[props.constraintKey].push(constraint);
+        parentConstraints.value.push(constraint);
 
         constraint[`right_operand_value_${valueType.value}`] = rightOperand;
       }
@@ -59,8 +85,7 @@ watch(
         newRightOperand === null ||
         newRightOperand === ""
       ) {
-        // @ts-ignore
-        props.parent[props.constraintKey].splice(index, 1);
+        parentConstraints.value.splice(index, 1);
       }
     }
   }

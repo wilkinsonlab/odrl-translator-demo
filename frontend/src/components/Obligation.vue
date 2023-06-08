@@ -3,15 +3,18 @@ import type { Duty, Permission, Prohibition } from "../types";
 
 import { useObligation, type Props } from "../composables/useObligation";
 
+import GroupConstraints from "./GroupConstraints.vue";
+
 const props = withDefaults(defineProps<Props>(), {
   allowConsequences: true
 });
+const initialObligation = defineModel<Duty>("obligation");
+const parent = defineModel<Permission | Prohibition>("parent");
 
 const {
   targets,
   actions,
   assignees,
-  constraints,
   consequences,
   addTarget,
   removeTarget,
@@ -19,19 +22,17 @@ const {
   removeAction,
   addAssignee,
   removeAssignee,
-  addConstraint,
-  removeConstraint,
   addConsequence,
   removeConsequence,
   obligation
-} = useObligation(props);
+} = useObligation(props, parent, initialObligation);
 
-const childrenParentType = props.parent
+const childrenParentType = parent.value
   ? props.parentType === "permission"
     ? "duty"
     : "remedy"
   : ("rule" as "duty" | "remedy" | "rule");
-const childrenData = props.parent
+const childrenData = parent.value
   ? props.parentType === "permission"
     ? { duty_id: obligation.id }
     : { remedy_id: obligation.id }
@@ -56,14 +57,15 @@ const childrenData = props.parent
             </h4>
             <component
               :is="target"
-              :parent="obligation"
+              v-model:target="obligation.targets[index]"
+              v-model:parent="obligation"
               :parentType="childrenParentType"
               :data="childrenData"
             ></component>
           </li>
           <br />
           <li class="green no-list-style" @click="addTarget">
-            + Add {{ parentType }} target
+            + Add {{ parentType === "permission" ? "duty" : "remedy" }} target
           </li>
         </ul>
       </li>
@@ -85,7 +87,8 @@ const childrenData = props.parent
             </h4>
             <component
               :is="action"
-              :parent="obligation"
+              v-model:action="obligation.actions[index]"
+              v-model:parent="obligation"
               :parentType="childrenParentType"
               :data="childrenData"
             ></component>
@@ -109,7 +112,8 @@ const childrenData = props.parent
             </h4>
             <component
               :is="assignee"
-              :parent="obligation"
+              v-model:assignee="obligation.assignees[index]"
+              v-model:parent="obligation"
               :parentType="childrenParentType"
               :data="childrenData"
             ></component>
@@ -136,7 +140,8 @@ const childrenData = props.parent
             </h4>
             <component
               :is="consequence"
-              :parent="(obligation as any)"
+              v-model:consequence="obligation.consequences![index]"
+              v-model:parent="obligation"
               :parentType="parent ? 'duty' : 'obligation'"
               :additionalData="
                 parent
@@ -159,27 +164,30 @@ const childrenData = props.parent
     <ul>
       <li><h3>Constraints</h3></li>
       <li class="no-list-style">
-        <ul>
-          <li v-for="(constraint, index) in constraints" :key="constraint.name">
-            <h4>
-              Constraint {{ index + 1 }}
-              <span @click="removeConstraint(index)" class="remove">X</span>
-            </h4>
-            <component
-              :is="constraint"
-              :parent="obligation"
-              :additionalData="{
-                rule_id: parent?.id,
-                ...(parent ? { duty_id: obligation.id } : {})
-              }"
-              constraintKey="constraints"
-            ></component>
-          </li>
-          <br />
-          <li class="green no-list-style" @click="addConstraint">
-            + Add {{ parent ? "duty" : "obligation" }} constraint
-          </li>
-        </ul>
+        <group-constraints
+          v-if="obligation.operand"
+          v-model:parent="obligation"
+          v-model:constraints="
+            obligation.logical_constraints[obligation.operand]
+          "
+          :parentType="parent ? 'duty' : 'rule'"
+          :additionalData="{
+            rule_id: parent?.id,
+            ...(parent ? { duty_id: obligation.id } : {})
+          }"
+        >
+        </group-constraints>
+        <group-constraints
+          v-else
+          v-model:parent="obligation"
+          v-model:constraints="obligation.constraints"
+          :parentType="parent ? 'duty' : 'rule'"
+          :additionalData="{
+            rule_id: parent?.id,
+            ...(parent ? { duty_id: obligation.id } : {})
+          }"
+        >
+        </group-constraints>
       </li>
     </ul>
   </section>

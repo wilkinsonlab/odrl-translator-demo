@@ -1,21 +1,47 @@
 import type {
   Rule,
   Obligation as ObligationContract,
-  Consequence as ConsequenceContract
+  Consequence as ConsequenceContract,
+  Permission
 } from "../types";
 
-import { ref, reactive, markRaw, type Ref } from "vue";
+import { ref, reactive, markRaw, unref, type Ref } from "vue";
 import useGetRandomID from "./useGetRandomID";
 import usePolicy from "./usePolicy";
 import { ODRL } from "../../../server/src/namespaces";
-import Target from "../components/Target.vue";
 import Assignee from "../components/Assignee.vue";
 import Action from "../components/Action.vue";
-import Constraint from "../components/Constraint.vue";
 import Obligation from "../components/Obligation.vue";
 import Consequence from "../components/Consequence.vue";
 
+import Target from "../components/Target.vue";
+
 const { policy } = usePolicy();
+
+const cces = {
+  commercial_entity: "Commercial Entity",
+  geographical_area: "Geographical Area",
+  regulatory_jurisdiction: "Regulatory Jurisdiction",
+  research_use: "Research Use",
+  clinical_care: "Clinical Care Use",
+  clinical_research_use: "Clinical Research Use",
+  disease_specific_use: "Disease Specific Use",
+  use_as_control: "Use As Control",
+  profit_motivated_use: "Profit Motivated Use",
+  time_period: "Time Period",
+  collaboration: "Collaboration",
+  fees: "Fees",
+  return_of_results: "Return Of Results",
+  return_of_incidental_findings: "Return Of Incidental Findings",
+  reidentification_of_individuals_without_irp:
+    "(Re-)Identification Of Individuals Without Involvement Of The Resource Provider",
+  reidentification_of_individuals_with_irp:
+    "(Re-)Identification Of Individuals Mediated By The Resource Provider",
+  publication_moratorium: "Publication Moratorium",
+  publication: "Publication",
+  user_authentication: "User Authentication",
+  ethics_approval: "Ethics Approval"
+};
 
 export const rulesMapping = {
   [ODRL("permission").value]: "permissions",
@@ -23,16 +49,38 @@ export const rulesMapping = {
   [ODRL("obligation").value]: "obligations"
 } as const;
 
-export function useRule() {
-  const ruleType = ref();
-  const targets = ref([markRaw(Target)]);
-  const actions = ref([markRaw(Action)]);
-  const assigner = ref(null);
-  const assignees = ref<Array<typeof Assignee>>([]);
-  const constraints = ref<Array<typeof Constraint>>([]);
-  const duties = ref<Array<typeof Obligation>>([]);
+export function useRule(initialRule?: Ref<Rule | undefined>) {
+  const ruleType = ref(initialRule?.value?.type);
+  const cce = ref(initialRule?.value?.cce);
+  const targets = ref(
+    initialRule
+      ? new Array(initialRule.value?.targets.length).fill(markRaw(Target))
+      : [markRaw(Target)]
+  );
+  const actions = ref(
+    initialRule
+      ? new Array(initialRule.value?.actions.length).fill(markRaw(Action))
+      : [markRaw(Action)]
+  );
+  const assigner = ref(initialRule?.value?.assigner);
+  const assignees = ref<Array<typeof Assignee>>(
+    initialRule
+      ? new Array(initialRule.value?.assignees.length).fill(markRaw(Assignee))
+      : [markRaw(Assignee)]
+  );
+  const duties = ref<Array<typeof Obligation>>(
+    initialRule && "duties" in initialRule
+      ? new Array(initialRule.value?.duties?.length).fill(markRaw(Obligation))
+      : [markRaw(Obligation)]
+  );
   const remedies = ref<Array<typeof Obligation>>([]);
   const consequences = ref<Array<typeof Consequence>>([]);
+
+  if (initialRule?.value) {
+    initialRule.value.type = ruleType;
+    initialRule.value.cce = cce;
+    initialRule.value.assigner = assigner;
+  }
 
   const rule = reactive<
     Omit<Rule, "assigner"> & {
@@ -41,15 +89,31 @@ export function useRule() {
       remedies?: Array<Omit<ObligationContract, "consequences">>;
       consequences?: Array<ConsequenceContract>;
     }
-  >({
-    id: useGetRandomID(),
-    policy_id: policy.id,
-    targets: [],
-    actions: [],
-    assigner,
-    assignees: [],
-    constraints: []
-  });
+  >(
+    (unref(initialRule) as any) ?? {
+      id: useGetRandomID(),
+      type: ruleType,
+      policy_id: policy.id,
+      cce,
+      targets: [],
+      actions: [],
+      assigner,
+      assignees: [],
+      constraints: [],
+      operand: null,
+      first: null,
+      logical_constraints: {
+        and: [],
+        or: [],
+        andSequence: [],
+        xone: []
+      }
+    }
+  );
+
+  if (initialRule?.value && ruleType.value === ODRL("permission").value) {
+    (rule as any).duties = (initialRule.value as Permission)?.duties ?? [];
+  }
 
   function addTarget() {
     targets.value.push(markRaw(Target));
@@ -66,7 +130,7 @@ export function useRule() {
 
   function removeAction(index: number) {
     actions.value.splice(index, 1);
-    rule.actions.splice(index, 1);
+    (initialRule?.value || rule).actions.splice(index, 1);
   }
 
   function addAssignee() {
@@ -76,15 +140,6 @@ export function useRule() {
   function removeAssignee(index: number) {
     assignees.value.splice(index, 1);
     rule.assignees.splice(index, 1);
-  }
-
-  function addConstraint() {
-    constraints.value.push(markRaw(Constraint));
-  }
-
-  function removeConstraint(index: number) {
-    constraints.value.splice(index, 1);
-    rule.constraints.splice(index, 1);
   }
 
   function addDuty() {
@@ -115,13 +170,14 @@ export function useRule() {
   }
 
   return {
+    cces,
+    cce,
     rulesMapping,
     ruleType,
     targets,
     actions,
     assigner,
     assignees,
-    constraints,
     duties,
     remedies,
     consequences,
@@ -131,8 +187,6 @@ export function useRule() {
     removeAction,
     addAssignee,
     removeAssignee,
-    addConstraint,
-    removeConstraint,
     addDuty,
     removeDuty,
     addRemedy,

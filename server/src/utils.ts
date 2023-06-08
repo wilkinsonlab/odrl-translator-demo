@@ -41,7 +41,7 @@ export async function getLabels(
   );
 
   // Labels are not in the current KB, get them using their IRI.
-  if (!result || result.length < 1) {
+  if ((!result || result.length < 1) && isValidUrl(statementIRI)) {
     result = (await fetchIRI(statementIRI))?.statementsMatching(
       $rdf.Namespace(statementIRI)(""),
       labelPredicate,
@@ -65,7 +65,7 @@ export async function getLabels(
          * we filter the statements to remove the ones whose QNames include ":".
          */
         .filter((label) => !label.match(/^[a-zA-Z]+:[a-zA-Z]+$/g))
-    : [];
+    : [statementIRI];
 }
 
 export async function getSentenceOrLabel(

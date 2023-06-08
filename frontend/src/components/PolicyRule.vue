@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Permission, Prohibition } from "../types";
+import { Permission, Prohibition, Rule } from "../types";
 
 import { ref, markRaw, watch, reactive } from "vue";
 import { ODRL } from "../../../server/src/namespaces";
@@ -7,14 +7,19 @@ import { ODRL } from "../../../server/src/namespaces";
 import usePolicy from "../composables/usePolicy";
 import { useRule, rulesMapping } from "../composables/useRule";
 
+import GroupConstraints from "./GroupConstraints.vue";
+
+const initialRule = defineModel<Rule>("rule");
+
 const { policy } = usePolicy();
 const {
+  cces,
+  cce,
   ruleType,
   targets,
   actions,
   assigner,
   assignees,
-  constraints,
   duties,
   remedies,
   consequences,
@@ -24,8 +29,6 @@ const {
   removeAction,
   addAssignee,
   removeAssignee,
-  addConstraint,
-  removeConstraint,
   addDuty,
   removeDuty,
   addRemedy,
@@ -33,7 +36,7 @@ const {
   addConsequence,
   removeConsequence,
   rule
-} = useRule();
+} = useRule(initialRule);
 
 watch(ruleType, (newRuleType, previousRuleType) => {
   if (previousRuleType) {
@@ -75,12 +78,21 @@ watch(ruleType, (newRuleType, previousRuleType) => {
     rule.consequences = [];
   }
 
-  policy.rules[rulesMapping[newRuleType]].push(rule as any);
+  policy.rules[rulesMapping[newRuleType!]].push(rule as any);
 });
 </script>
 
 <template>
   <section>
+    <p>
+      <label>Common Condition of Use Element</label>
+      <select v-model="cce">
+        <option v-for="(_cce, key) of cces" :key="key" :value="key">
+          {{ _cce }}
+        </option>
+      </select>
+    </p>
+
     <p>
       <label>Rule type</label>
       <select v-model="ruleType">
@@ -95,7 +107,7 @@ watch(ruleType, (newRuleType, previousRuleType) => {
         <li><h3 class="title">Targets</h3></li>
         <li class="no-list-style">
           <ul>
-            <li v-for="(target, index) in targets" :key="target.name">
+            <li v-for="(target, index) in targets" :key="index">
               <h4>
                 Target {{ index + 1 }}
                 <span
@@ -107,8 +119,10 @@ watch(ruleType, (newRuleType, previousRuleType) => {
               </h4>
               <component
                 :is="target"
-                :parent="rule"
+                v-model:parent="rule"
+                v-model:target="rule.targets[index]"
                 parentType="rule"
+                :key="index"
               ></component>
             </li>
             <br />
@@ -121,7 +135,7 @@ watch(ruleType, (newRuleType, previousRuleType) => {
         <li><h3>Actions</h3></li>
         <li class="no-list-style">
           <ul>
-            <li v-for="(action, index) in actions" :key="action.name">
+            <li v-for="(action, index) in actions" :key="index">
               <h4>
                 Action {{ index + 1 }}
                 <span
@@ -133,7 +147,8 @@ watch(ruleType, (newRuleType, previousRuleType) => {
               </h4>
               <component
                 :is="action"
-                :parent="rule"
+                v-model:action="rule.actions[index]"
+                v-model:parent="rule"
                 parentType="rule"
               ></component>
             </li>
@@ -159,7 +174,8 @@ watch(ruleType, (newRuleType, previousRuleType) => {
               </h4>
               <component
                 :is="assignee"
-                :parent="rule"
+                v-model:parent="rule"
+                v-model:assignee="rule.assignees[index]"
                 parentType="rule"
               ></component>
             </li>
@@ -173,43 +189,35 @@ watch(ruleType, (newRuleType, previousRuleType) => {
 
       <ul>
         <li><h3>Constraints</h3></li>
-        <li class="no-list-style">
-          <ul>
-            <li
-              v-for="(constraint, index) in constraints"
-              :key="constraint.name"
-            >
-              <h4>
-                Constraint {{ index + 1 }}
-                <span @click="removeConstraint(index)" class="remove">X</span>
-              </h4>
-              <component
-                :is="constraint"
-                :parent="rule"
-                :additionalData="{ rule_id: rule.id }"
-                constraintKey="constraints"
-              ></component>
-            </li>
-            <br />
-            <li class="green no-list-style" @click="addConstraint">
-              + Add constraint
-            </li>
-          </ul>
-        </li>
+        <group-constraints
+          v-if="rule.operand"
+          v-model:parent="rule"
+          v-model:constraints="rule.logical_constraints[rule.operand]"
+          parentType="rule"
+        >
+        </group-constraints>
+        <group-constraints
+          v-else
+          v-model:parent="rule"
+          v-model:constraints="rule.constraints"
+          parentType="rule"
+        >
+        </group-constraints>
       </ul>
 
       <ul v-if="ruleType === ODRL('permission').value">
         <li><h3>Duties</h3></li>
         <li class="no-list-style">
           <ul>
-            <li v-for="(duty, index) in duties" :key="duty.name">
+            <li v-for="(duty, index) in duties" :key="index">
               <h4>
                 Duty {{ index + 1 }}
                 <span @click="removeDuty(index)" class="remove">X</span>
               </h4>
               <component
                 :is="duty"
-                :parent="(rule as Permission)"
+                v-model:parent="rule"
+                v-model:obligation="rule.duties![index]"
                 parentType="permission"
                 :data="{ rule_id: rule.id }"
               ></component>
@@ -231,7 +239,8 @@ watch(ruleType, (newRuleType, previousRuleType) => {
               </h4>
               <component
                 :is="remedy"
-                :parent="(rule as Prohibition)"
+                v-model:parent="rule"
+                v-model:obligation="rule.remedies![index]"
                 parentType="prohibition"
                 :data="{ rule_id: rule.id }"
                 :allowConsequences="false"

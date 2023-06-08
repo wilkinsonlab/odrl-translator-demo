@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, markRaw, computed } from "vue";
+import { ref, reactive, markRaw, toValue } from "vue";
 import { Steppy } from "vue3-steppy";
 import { ODRL } from "../../../server/src/namespaces";
 import PolicyRule from "../components/PolicyRule.vue";
@@ -20,11 +20,15 @@ const tabs = reactive([
 
 const reference = ref(null);
 
-const rules = ref([markRaw(PolicyRule)]);
 const { policy, onDone, done, policies } = usePolicy();
+const rules = ref(new Array(policy.rules.permissions.length + policy.rules.prohibitions.length + policy.rules.obligations.length + 1).fill(markRaw(PolicyRule)));
+
+const initialArrayOfRules = [...policy.rules.permissions, ...policy.rules.prohibitions, ...policy.rules.obligations]
 
 function onReferenceEnter() {
-  policy.references.push(reference.value);
+  if (reference.value) {
+    policy.references.push(reference.value);
+  }
 
   reference.value = null;
 }
@@ -83,6 +87,10 @@ function removeRule(index: number) {
           <input v-model="policy.creator" type="text" />
         </p>
         <p>
+          <label>Date</label>
+          <input v-model="policy.issued" type="date" />
+        </p>
+        <p>
           <label>Description</label>
           <textarea v-model="policy.description"></textarea>
         </p>
@@ -90,7 +98,7 @@ function removeRule(index: number) {
       <template #2>
         <h2>Rules</h2>
         <ul>
-          <li v-for="(rule, index) in rules" :key="rule.name">
+          <li v-for="(rule, index) in rules" :key="index">
             <h3>
               Rule {{ index + 1 }}
               <span
@@ -101,11 +109,21 @@ function removeRule(index: number) {
               >
             </h3>
             <keep-alive>
-              <component
-                :is="rule"
-                :policy="policy"
-                :key="rule.name"
-              ></component>
+              <template v-if="initialArrayOfRules[index] !== undefined">
+                <component
+                  :is="rule"
+                  :policy="policy"
+                  v-model:rule="initialArrayOfRules[index]"
+                  :key="index"
+                ></component>
+              </template>
+              <template v-else>
+                <component
+                  :is="rule"
+                  :policy="policy"
+                  :key="index"
+                ></component>
+              </template>
             </keep-alive>
           </li>
           <br />

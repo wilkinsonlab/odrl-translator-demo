@@ -7,6 +7,7 @@ import Exception from "./exception.js";
 import StatementsMatcher from "./statements_matcher.js";
 import Action from "./action.js";
 import Party from "./party.js";
+import Asset from "./asset.js";
 
 export default class Rule {
   /**************************** ATTRIBUTES *****************************/
@@ -26,7 +27,7 @@ export default class Rule {
   /**
    * The targets of the rule.
    */
-  protected _targets?: Array<$rdf.Statement>;
+  protected _targets?: Array<Asset>;
 
   /**
    * The output of the rule.
@@ -108,7 +109,9 @@ export default class Rule {
       .execute();
 
     if (result) {
-      this._targets = result;
+      this._targets = result.map(
+        (statement) => new Asset(this.kb, statement, this)
+      );
     } else {
       /**
        * If Rule is of type Duty, the target is optional.

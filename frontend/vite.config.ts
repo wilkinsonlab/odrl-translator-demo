@@ -13,7 +13,15 @@ export default defineConfig({
       target: "es2020"
     }
   },
-  plugins: [nodePolyfills(), vue()],
+  plugins: [
+    nodePolyfills(),
+    vue({
+      script: {
+        defineModel: true,
+        propsDestructure: true
+      }
+    })
+  ],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url))

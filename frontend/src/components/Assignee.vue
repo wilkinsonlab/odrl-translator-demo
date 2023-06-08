@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Rule, Duty } from "../types";
+import type { Rule, Duty, Assignee, Consequence } from "../types";
 
 import { watch } from "vue";
 
@@ -11,18 +11,17 @@ import partyTypes from "../shared/partyTypes";
 const props = withDefaults(defineProps<Props>(), {
   allowRefinements: true
 })
+const initialAssignee = defineModel<Assignee>("assignee")
+const parent = defineModel<Rule | Duty | Consequence>("parent", { required: true })
 
 const {
     partyType,
     uri,
-    refinements,
     assignee,
-    addRefinement,
-    removeRefinement,
     additionalData
-  } = useAssignee(props)
+  } = useAssignee(props, parent, initialAssignee)
 
-  watch(
+  /*watch(
   [uri],
   ([newURI]) => {
     const parent = props.parent
@@ -43,7 +42,27 @@ const {
       }
     }
   }
-);
+);*/
+
+watch(uri, (newURI) => {
+  if (partyType.value === ODRL("Party").value) {
+    assignee.source = null
+    assignee.uid = newURI !== "" ? newURI : null
+  } else {
+    assignee.uid = null
+    assignee.source = newURI !== "" ? newURI : null
+  }
+})
+
+watch(partyType, (newType) => {
+  if (newType === ODRL("Party").value) {
+    assignee.uid = assignee.source
+    assignee.source = null
+  } else {
+    assignee.source = assignee.uid
+    assignee.uid = null
+  }
+})
 </script>
 
 <template>
@@ -62,12 +81,12 @@ const {
   <p>
     <h3>Refinements</h3>
 
-    <ul>
-      <li v-for="(refinement, index) in refinements" :key="refinement.name">
-        <h4>Refinement {{ index + 1 }} <span @click="removeRefinement(index)" class="remove">X</span></h4>
-        <component :is="refinement" :parent="assignee" :additionalData="additionalData" constraintKey="refinements"></component>
-      </li>
-      <li class="green no-list-style" @click="addRefinement">+ Add {{ parentType }} assignee refinement</li>
-    </ul>
+    <group-constraints
+      v-model:parent="assignee"
+      v-model:constraints="assignee.refinements"
+      parentType="assignee"
+      :additionalData="additionalData"
+    >
+    </group-constraints>
   </p>
 </template>

@@ -1,41 +1,73 @@
-import type { Rule, Duty, Consequence } from "../types";
+import type { Rule, Duty, Consequence, Assignee } from "../types";
 
-import { ref, reactive, markRaw } from "vue";
+import { ref, reactive, markRaw, unref, type Ref } from "vue";
 
 import useGetRandomID from "../composables/useGetRandomID";
+
+import { ODRL } from "../../../server/src/namespaces";
 
 import Constraint from "../components/Constraint.vue";
 
 export interface Props {
-  parent: Rule | Duty | Consequence;
+  //parent: Rule | Duty | Consequence;
   parentType: "rule" | "duty" | "consequence" | "remedy";
   allowRefinements?: boolean;
   data?: Record<string, any>;
 }
 
-export function useAssignee({
-  parent,
-  parentType,
-  allowRefinements,
-  data
-}: Props) {
-  const partyType = ref(null);
-  const uri = ref(null);
-  const refinements = ref<Array<typeof Constraint>>([]);
+export function useAssignee(
+  {
+    //parent,
+    parentType,
+    allowRefinements,
+    data
+  }: Props,
+  parent: Ref<Rule | Duty | Consequence>,
+  initialAssignee?: Ref<Assignee | undefined>
+) {
+  const partyType = ref(initialAssignee?.value?.type);
+  const uri = ref(
+    initialAssignee?.value?.uid ?? initialAssignee?.value?.source
+  );
 
   const rule_id =
-    parentType === "rule" ? parent.id : ((parent as any).rule_id as number);
+    initialAssignee?.value?.rule_id ??
+    (parentType === "rule"
+      ? parent.value.id
+      : ((parent as any).rule_id as number));
 
-  const assignee = reactive({
-    id: useGetRandomID(),
-    policy_id: parent.policy_id,
-    rule_id,
-    type: partyType,
-    uid: uri,
-    source: uri, // In case it's an PartyCollection, remove `uid` and keep `source`
-    refinements: [],
-    ...data
-  });
+  if (initialAssignee?.value) {
+    initialAssignee.value.uri = uri;
+    initialAssignee.value.type = partyType;
+
+    if (initialAssignee.value.type === ODRL("Party").value) {
+      initialAssignee.value.uid = uri.value!;
+    } else {
+      initialAssignee.value.source = uri.value!;
+    }
+  }
+
+  const assignee = reactive(
+    unref(initialAssignee) ?? {
+      id: useGetRandomID(),
+      policy_id: parent.value.policy_id,
+      rule_id,
+      type: partyType,
+      uri,
+      uid: null,
+      source: null, // In case it's an PartyCollection, remove `uid` and keep `source`
+      refinements: [],
+      operand: null,
+      first: null,
+      logical_constraints: {
+        and: [],
+        or: [],
+        andSequence: [],
+        xone: []
+      },
+      ...data
+    }
+  );
 
   const additionalData: {
     rule_id: number;
@@ -46,26 +78,18 @@ export function useAssignee({
     assignee_id: assignee.id
   };
 
+  if (!initialAssignee?.value) {
+    parent.value.assignees.push(assignee as any);
+  }
+
   if (parentType === "duty") {
-    additionalData.duty_id = parent.id;
-  }
-
-  function addRefinement() {
-    refinements.value.push(markRaw(Constraint));
-  }
-
-  function removeRefinement(index: number) {
-    refinements.value.splice(index, 1);
-    assignee.refinements.splice(index, 1);
+    additionalData.duty_id = parent.value.id;
   }
 
   return {
     partyType,
     uri,
-    refinements,
     assignee,
-    addRefinement,
-    removeRefinement,
     additionalData
   };
 }

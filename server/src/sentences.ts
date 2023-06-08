@@ -27,7 +27,7 @@ export default function getSentence(
     },
     [ODRL("grantUse").value]: "grant the use to",
     [ODRL("policyUsage").value]: "the rule is exercised",
-    [ODRL("isA").value]: "must be of type",
+    [ODRL("isA").value]: "must be",
     [ODRL("lt").value]: "lesser than",
     [ODRL("lteq").value]: "lesser than or equal to",
     [ODRL("eq").value]: "equals to",
@@ -51,8 +51,8 @@ export default function getSentence(
       [ODRL("gteq").value]: "percentage must be equal to or greater than",
     },
     [ODRL("recipient").value]: {
-      [ODRL("eq").value]: "recipient defined as",
-      [ODRL("neq").value]: "all recipients except",
+      [ODRL("eq").value]: "with",
+      [ODRL("neq").value]: "with all except",
     },
     [XSD("time").value]: {
       [ODRL("lt").value]: "before",

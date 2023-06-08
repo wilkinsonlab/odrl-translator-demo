@@ -1,7 +1,7 @@
 import * as $rdf from "rdflib";
 
 import Rule from "./rule.js";
-import { ODRL, RDFS, SKOS, XSD } from "./namespaces.js";
+import { ODRL, RDFS, SKOS, XSD, RDF } from "./namespaces.js";
 import { listToString, getSentenceOrLabel } from "./utils.js";
 import fetchIRI from "./fetch_iri.js";
 import Exception from "./exception.js";
@@ -54,7 +54,7 @@ export default class Constraint {
 
   constructor(
     private kb: $rdf.Formula,
-    private statement: $rdf.Statement,
+    private statement: $rdf.Statement | $rdf.NamedNode,
     private _rule: Rule
   ) {
     this.#statementsMatcher = new StatementsMatcher(this.kb);
@@ -149,7 +149,9 @@ export default class Constraint {
 
   #setLeftOperand() {
     const leftOperand = this.#statementsMatcher
-      .subject(this.statement.object)
+      .subject(
+        "termType" in this.statement ? this.statement : this.statement.object
+      )
       .predicate(ODRL("leftOperand"))
       .execute();
 
@@ -157,7 +159,7 @@ export default class Constraint {
       this.#leftOperand = leftOperand[0];
     } else {
       throw new Exception(
-        `The constraint must have a "leftOperand" property defined`,
+        `The constraint must have a "leftOperand" property defined: ${this.statement.object.value}`,
         500,
         "E_NO_LEFT_OPERAND_DEFINED"
       );
@@ -166,7 +168,9 @@ export default class Constraint {
 
   #setOperator() {
     const operator = this.#statementsMatcher
-      .subject(this.statement.object)
+      .subject(
+        "termType" in this.statement ? this.statement : this.statement.object
+      )
       .predicate(ODRL("operator"))
       .execute();
 
@@ -183,7 +187,9 @@ export default class Constraint {
 
   #setRightOperand() {
     const rightOperands = this.#statementsMatcher
-      .subject(this.statement.object)
+      .subject(
+        "termType" in this.statement ? this.statement : this.statement.object
+      )
       .predicate(ODRL("rightOperand"))
       .execute();
 
@@ -202,7 +208,9 @@ export default class Constraint {
 
   #setUnit() {
     const unit = this.#statementsMatcher
-      .subject(this.statement.object)
+      .subject(
+        "termType" in this.statement ? this.statement : this.statement.object
+      )
       .predicate(ODRL("unit"))
       .execute();
 
