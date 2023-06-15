@@ -30,4 +30,11 @@ export default class Prohibition extends Rule {
       });
     }
   }
+
+  public toJSON() {
+    return {
+      ...super.toJSON(),
+      remedies: this.#remedies.map((remedy) => remedy.toJSON()),
+    };
+  }
 }

@@ -1,7 +1,7 @@
 export enum RuleType {
   PERMISSION = "permission",
   DUTY = "duty",
-  PROHIBITION = "prohibition"
+  PROHIBITION = "prohibition",
 }
 
 export enum Functions {
@@ -18,12 +18,18 @@ export enum Functions {
   INFORMED_PARTY = "informedParty",
   INFORMING_PARTY = "informingParty",
   TRACKED_PARTY = "trackedParty",
-  TRACKING_PARTY = "trackingParty"
+  TRACKING_PARTY = "trackingParty",
+  SHARING_PARTY = "sharingParty",
+  SHARED_PARTY = "sharedParty",
+  ACKNOWLEDGING_PARTY = "acknowledgingParty",
+  ACKNOWLEDGED_PARTY = "acknowledgedParty",
+  COLLABORATING_PARTY = "collaboratingParty",
+  COLLABORATED_PARTY = "collaboratedParty",
 }
 
 export enum LogicalConstraintOperands {
   XONE = "xone",
   OR = "or",
   AND = "and",
-  AND_SEQUENCE = "andSequence"
+  AND_SEQUENCE = "andSequence",
 }

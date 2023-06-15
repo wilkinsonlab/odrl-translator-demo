@@ -11,8 +11,6 @@ export default class Action {
 
   #statementsMatcher: StatementsMatcher;
 
-  #context?: string;
-
   #implies?: Array<Action>;
 
   #includedIn?: Action;
@@ -28,7 +26,6 @@ export default class Action {
   ) {
     this.#statementsMatcher = new StatementsMatcher(this.kb);
 
-    this.#setContext();
     this.#setRefinements();
   }
 
@@ -36,10 +33,6 @@ export default class Action {
 
   public get iri() {
     return this.#getActionIRIStatement().object.value;
-  }
-
-  public get context() {
-    return this.#context;
   }
 
   public get isObject() {
@@ -65,19 +58,6 @@ export default class Action {
     return (
       await getSentenceOrLabel(this.#getActionIRIStatement(), this.kb)
     )[0].toLowerCase();
-  }
-
-  #setContext() {
-    if (this.isObject) {
-      const result = this.#statementsMatcher
-        .subject(this.statement.object)
-        .predicate(DCE("subject"))
-        .execute();
-
-      if (result) {
-        this.#context = result[0].object.value;
-      }
-    }
   }
 
   /**
@@ -118,7 +98,7 @@ export default class Action {
         "andSequence",
       ] as const) {
         const logicalConstraintStatement = this.#statementsMatcher
-          .subject(undefined)
+          .subject(refinements[0].object)
           .predicate(ODRL(logicalConstraintType))
           .execute();
 
@@ -150,12 +130,19 @@ export default class Action {
 
       if (!isLogicalConstraint) {
         refinements.forEach((refinement) => {
-          console.log(refinement);
           this.#refinements.push(
             new Constraint(this.kb, refinement, this.rule)
           );
         });
       }
     }
+  }
+
+  public toJSON() {
+    return {
+      id: this.statement.object.value,
+      iri: this.iri,
+      refinements: this.#refinements.map((refinement) => refinement.toJSON()),
+    };
   }
 }

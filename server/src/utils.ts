@@ -27,7 +27,7 @@ export async function getLabels(
   kb: $rdf.Formula
 ): Promise<Array<string>> {
   const statementIRI = statement.object.value;
-  const regex = new RegExp("dpv#", "g");
+  const regex = new RegExp("dpv#|dpv-legal#", "g");
   const labelPredicate = statementIRI.match(regex)
     ? SKOS("prefLabel")
     : RDFS("label");
@@ -68,6 +68,39 @@ export async function getLabels(
     : [statementIRI];
 }
 
+export async function getLabelsFromIRI(iri: string): Promise<Array<string>> {
+  const regex = new RegExp("dpv#|dpv-legal#", "g");
+  const labelPredicate = iri.match(regex) ? SKOS("prefLabel") : RDFS("label");
+  let result;
+
+  // Labels are not in the current KB, get them using their IRI.
+  if (isValidUrl(iri)) {
+    result = (await fetchIRI(iri))?.statementsMatching(
+      $rdf.Namespace(iri)(""),
+      labelPredicate,
+      undefined
+    );
+  }
+
+  return result && result.length > 0
+    ? result
+        .map((_statement) => {
+          let label = _statement.object.value;
+
+          if (label.startsWith("has ")) {
+            label = label.replace("has ", "");
+          }
+
+          return label.toLowerCase();
+        })
+        /**
+         * If the triple has multiple labels (s p o_1, o_2, ...o_n),
+         * we filter the statements to remove the ones whose QNames include ":".
+         */
+        .filter((label) => !label.match(/^[a-zA-Z]+:[a-zA-Z]+$/g))
+    : [iri];
+}
+
 export async function getSentenceOrLabel(
   statement: $rdf.Statement,
   kb: $rdf.Formula
@@ -80,11 +113,13 @@ export async function getSentenceOrLabel(
     : (await getLabels(statement, kb)) ?? [value];
 }
 
-export function listToString(strings?: Array<string | undefined>) {
+export function listToString(strings?: Array<string | number>) {
   if (strings && strings.length > 0) {
     return strings
       .filter((string) => string !== "") // Remove empty strings
       .join(", ") // Join the strings
       .replace(/, ([^,]*)$/, " and $1"); // Remove the last comma and replace it with conjunction
   }
+
+  return "";
 }

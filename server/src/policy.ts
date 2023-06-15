@@ -1,6 +1,6 @@
 import * as $rdf from "rdflib";
 
-import { ODRL, RDF } from "./namespaces.js";
+import { DCTERMS, ODRL, RDF } from "./namespaces.js";
 import { Functions } from "./enums.js";
 import { enumKeys } from "./utils.js";
 import Permission from "./permission.js";
@@ -13,7 +13,7 @@ export default class Policy {
 
   protected statementsMatcher: StatementsMatcher;
 
-  protected _type: $rdf.Statement | undefined;
+  protected _type: $rdf.Statement;
 
   protected uid: $rdf.NamedNode;
 
@@ -29,6 +29,10 @@ export default class Policy {
 
   protected _obligations: Array<Duty> = [];
 
+  private creator: string | null = null;
+
+  private issuedDate: string | null = null;
+
   /**
    * The common functions of the Policy.
    */
@@ -42,6 +46,8 @@ export default class Policy {
     this.uid = new $rdf.NamedNode(uid);
 
     this.#setType();
+    this.#setCreator();
+    this.#setIssuedDate();
     this.#setFunctions();
     this.#setPermissions();
     this.#setProhibitions();
@@ -80,6 +86,28 @@ export default class Policy {
 
     if (result && result.length > 0) {
       this._type = result[0];
+    }
+  }
+
+  #setCreator() {
+    const result = this.statementsMatcher
+      .subject(this.uid)
+      .predicate(DCTERMS("creator"))
+      .execute();
+
+    if (result && result.length > 0) {
+      this.creator = result[0].object.value;
+    }
+  }
+
+  #setIssuedDate() {
+    const result = this.statementsMatcher
+      .subject(this.uid)
+      .predicate(DCTERMS("issued"))
+      .execute();
+
+    if (result && result.length > 0) {
+      this.issuedDate = result[0].object.value;
     }
   }
 
@@ -134,5 +162,19 @@ export default class Policy {
         this._functions.set(functionValue, result[0]);
       }
     }
+  }
+
+  public toJSON() {
+    return {
+      id: this.uid.value,
+      type: this._type.object.value,
+      creator: this.creator,
+      issuedDate: this.issuedDate,
+      permissions: this.permissions.map((permission) => permission.toJSON()),
+      prohibitions: this.prohibitions.map((prohibition) =>
+        prohibition.toJSON()
+      ),
+      obligations: this.obligations.map((obligation) => obligation.toJSON()),
+    };
   }
 }

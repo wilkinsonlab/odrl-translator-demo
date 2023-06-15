@@ -10,11 +10,6 @@ export default class Permission extends Rule {
   /**************************** ATTRIBUTES *****************************/
 
   /**
-   * List of the duty's constraints.
-   */
-  #constraints: Array<Constraint> = [];
-
-  /**
    * List of the permission's duties.
    */
   #duties: Array<Duty> = [];
@@ -31,7 +26,7 @@ export default class Permission extends Rule {
   /****************************** GETTERS ******************************/
 
   get constraints() {
-    return this.#constraints;
+    return this._constraints;
   }
 
   get duties() {
@@ -48,7 +43,7 @@ export default class Permission extends Rule {
 
     if (constraints && constraints.length > 0) {
       constraints.forEach((constraint) => {
-        this.#constraints.push(new Constraint(this.kb, constraint, this));
+        this._constraints.push(new Constraint(this.kb, constraint, this));
       });
     }
   }
@@ -64,5 +59,12 @@ export default class Permission extends Rule {
         this.#duties.push(new Duty(this.kb, duty));
       });
     }
+  }
+
+  public toJSON() {
+    return {
+      ...super.toJSON(),
+      duties: this.#duties.map((duty) => duty.toJSON()),
+    };
   }
 }

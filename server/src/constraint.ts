@@ -159,7 +159,9 @@ export default class Constraint {
       this.#leftOperand = leftOperand[0];
     } else {
       throw new Exception(
-        `The constraint must have a "leftOperand" property defined: ${this.statement.object.value}`,
+        `The constraint must have a "leftOperand" property defined: ${
+          this.statement.object?.value ?? this.statement.value
+        }`,
         500,
         "E_NO_LEFT_OPERAND_DEFINED"
       );
@@ -177,8 +179,11 @@ export default class Constraint {
     if (operator) {
       this.#operator = operator[0];
     } else {
+      console.log(this.statement);
       throw new Exception(
-        `The constraint must have an "operator" property defined`,
+        `The constraint must have a "operator" property defined: ${
+          this.statement.object?.value ?? this.statement.value
+        }`,
         500,
         "E_NO_OPERATOR_DEFINED"
       );
@@ -217,6 +222,17 @@ export default class Constraint {
     if (unit) {
       this.#unit = unit[0];
     }
+  }
+
+  public toJSON() {
+    return {
+      id: this.statement.object?.value ?? this.statement.value,
+      leftOperand: this.#leftOperand.object.value,
+      operator: this.#operator.object.value,
+      rightOperand: this.#rightOperands.map(
+        (rightOperand) => rightOperand.value
+      ),
+    };
   }
 }
 

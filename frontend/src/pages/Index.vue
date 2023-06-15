@@ -1,24 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-type Result = {
-  policies: Array<{
-    description: string;
-    permissions?: Array<{
-      sentence: string;
-      constraints?: Array<{ sentence: string }>;
-      duties?: Array<{ sentence: string; constraints: Array<string> }>;
-    }>;
-    prohibitions?: Array<{
-      sentence: string;
-      remedies?: Array<{ sentence: string }>;
-    }>
-  }>;
-}
+import { Translation } from "../../../server/src/translator";
+import actions from "../shared/actions";
 
 const input = ref("");
 const language = ref("english");
-const results = ref<Result | null>(null);
+const results = ref<{ policies: Array<Translation> } | null>(null);
 const isLoading = ref(false);
 
 function replaceURLByLink(text: string) {
@@ -80,14 +68,14 @@ async function onSubmit() {
       <div
         class="result"
         :dir="['arabic', 'hebrew'].includes(language) ? 'rtl' : 'ltr'"
-        v-for="(policy, index) in results?.policies"
+        v-for="(policy, index) of results?.policies || []"
         :key="index"
       >
         <template v-if="policy">
           <h3 class="blue">Policy description</h3>
           <p v-html="replaceURLByLink(policy.description)"></p>
 
-          <template v-if="policy.permissions && policy.permissions.length > 0">
+          <template v-if="Object.keys(policy.permissions).length > 0">
             <h3 class="green">Permissions</h3>
 
             <ul>
@@ -95,50 +83,68 @@ async function onSubmit() {
                 v-for="(permission, index) in policy.permissions"
                 :key="index"
               >
+                <span>
+                  <strong>Term: {{ permission.cce }}</strong>
+                </span>
+
+                <br />
+
                 <span
-                  v-html="
-                    replaceURLByLink(`${index + 1}. ${permission.sentence}`)
-                  "
-                ></span>
+                  v-for="(action, _index) in permission.actions"
+                  :key="_index"
+                >
+                  <p v-html="replaceURLByLink(action.sentence)"></p>
+
+                  <template
+                    v-if="action.refinements.filter(Boolean).length > 0"
+                  >
+                    <h5 class="orange">Action constraints</h5>
+
+                    <ul>
+                      <li
+                        v-for="(refinement, _index) in action.refinements"
+                        :key="_index"
+                      >
+                        <span v-html="replaceURLByLink(refinement)"></span>
+                      </li>
+                    </ul>
+                  </template>
+                </span>
 
                 <template
                   v-if="
                     permission.constraints && permission.constraints?.length > 0
                   "
                 >
-                  <h5 class="orange">{{ index + 1 }}.1. Constraints</h5>
+                  <h5 class="orange">Permission constraints</h5>
                   <ul>
                     <li
                       v-for="(constraint, _index) in permission.constraints"
                       :key="_index"
                     >
-                      <span
-                        v-html="
-                          replaceURLByLink(
-                            `${index + 1}.1.${_index + 1}. ${constraint}`
-                          )
-                        "
-                      ></span>
+                      <span v-html="replaceURLByLink(constraint)"></span>
                     </li>
                   </ul>
                 </template>
 
                 <template
-                  v-if="permission.duties && permission.duties.length > 0"
+                  v-if="
+                    permission.duties &&
+                    Object.keys(permission.duties).length > 0
+                  "
                 >
-                  <h5 class="orange">{{ index + 1 }}.1. Duties</h5>
+                  <h5 class="orange">Duties</h5>
                   <ul>
                     <li
                       v-for="(duty, _index) in permission.duties"
                       :key="_index"
                     >
                       <span
-                        v-html="
-                          replaceURLByLink(
-                            `${index + 1}.1.${_index + 1}. ${duty.sentence}`
-                          )
-                        "
-                      ></span>
+                        v-for="(action, _index) in duty.actions"
+                        :key="_index"
+                        v-html="replaceURLByLink(action.sentence)"
+                      >
+                      </span>
 
                       <template
                         v-if="duty.constraints && duty.constraints.length > 0"
@@ -164,44 +170,217 @@ async function onSubmit() {
                     </li>
                   </ul>
                 </template>
+
+                <hr />
               </li>
             </ul>
           </template>
 
-          <template
-            v-if="policy.prohibitions && policy.prohibitions.length > 0"
-          >
+          <template v-if="Object.keys(policy.prohibitions).length > 0">
             <h3 class="red">Prohibitions</h3>
+
             <ul>
               <li
                 v-for="(prohibition, index) in policy.prohibitions"
                 :key="index"
               >
+                <span>
+                  <strong>Term: {{ prohibition.cce }}</strong>
+                </span>
+
+                <br />
+
                 <span
-                  v-html="
-                    replaceURLByLink(`${index + 1}. ${prohibition.sentence}`)
-                  "
-                ></span>
+                  v-for="(action, _index) in prohibition.actions"
+                  :key="_index"
+                >
+                  <p v-html="replaceURLByLink(action.sentence)"></p>
+
+                  <template
+                    v-if="action.refinements.filter(Boolean).length > 0"
+                  >
+                    <h5 class="orange">Action constraints</h5>
+
+                    <ul>
+                      <li
+                        v-for="(refinement, _index) in action.refinements"
+                        :key="_index"
+                      >
+                        <span v-html="replaceURLByLink(refinement)"></span>
+                      </li>
+                    </ul>
+                  </template>
+                </span>
 
                 <template
-                  v-if="prohibition.remedies && prohibition.remedies.length > 0"
+                  v-if="
+                    prohibition.constraints &&
+                    prohibition.constraints?.length > 0
+                  "
                 >
-                  <h5 class="orange">{{ index + 1 }}.1. Remedies</h5>
+                  <h5 class="orange">Prohibition constraints</h5>
                   <ul>
                     <li
-                      v-for="(remedy, _index) in prohibition.remedies"
+                      v-for="(constraint, _index) in prohibition.constraints"
                       :key="_index"
                     >
                       <span
                         v-html="
                           replaceURLByLink(
-                            `${index + 1}.1.${_index + 1}. ${remedy.sentence}`
+                            `${index + 1}.1.${_index + 1}. ${constraint}`
                           )
                         "
                       ></span>
                     </li>
                   </ul>
                 </template>
+
+                <template
+                  v-if="
+                    prohibition.remedies &&
+                    Object.keys(prohibition.remedies).length > 0
+                  "
+                >
+                  <h5 class="orange">Remedies</h5>
+                  <ul>
+                    <li
+                      v-for="(duty, _index) in prohibition.remedies"
+                      :key="_index"
+                    >
+                      <span
+                        v-for="(action, _index) in duty.actions"
+                        :key="_index"
+                        v-html="replaceURLByLink(action.sentence)"
+                      >
+                      </span>
+
+                      <template
+                        v-if="duty.constraints && duty.constraints.length > 0"
+                      >
+                        <h5 class="yellow">
+                          {{ index + 1 }}.1. Duty constraints
+                        </h5>
+                        <ul>
+                          <li
+                            v-for="(constraint, _index) in duty.constraints"
+                            :key="_index"
+                          >
+                            <span
+                              v-html="
+                                replaceURLByLink(
+                                  `${index + 1}.1.${_index + 1}. ${constraint}`
+                                )
+                              "
+                            ></span>
+                          </li>
+                        </ul>
+                      </template>
+                    </li>
+                  </ul>
+                </template>
+
+                <hr />
+              </li>
+            </ul>
+          </template>
+
+          <template v-if="Object.keys(policy.obligations).length > 0">
+            <h3 class="orange">Obligtions</h3>
+
+            <ul>
+              <li
+                v-for="(obligation, index) in policy.obligations"
+                :key="index"
+              >
+                <span>
+                  <strong>Term: {{ obligation.cce }}</strong>
+                </span>
+
+                <br />
+
+                <span
+                  v-for="(action, _index) in obligation.actions"
+                  :key="_index"
+                >
+                  <p v-html="replaceURLByLink(action.sentence)"></p>
+
+                  <template
+                    v-if="action.refinements.filter(Boolean).length > 0"
+                  >
+                    <h5 class="orange">Action constraints</h5>
+
+                    <ul>
+                      <li
+                        v-for="(refinement, _index) in action.refinements"
+                        :key="_index"
+                      >
+                        <span v-html="replaceURLByLink(refinement)"></span>
+                      </li>
+                    </ul>
+                  </template>
+                </span>
+
+                <template
+                  v-if="
+                    obligation.constraints && obligation.constraints?.length > 0
+                  "
+                >
+                  <h5 class="orange">Obligation constraints</h5>
+                  <ul>
+                    <li
+                      v-for="(constraint, _index) in obligation.constraints"
+                      :key="_index"
+                    >
+                      <span v-html="replaceURLByLink(constraint)"></span>
+                    </li>
+                  </ul>
+                </template>
+
+                <template
+                  v-if="
+                    obligation.consequences &&
+                    Object.keys(obligation.consequences).length > 0
+                  "
+                >
+                  <h5 class="orange">Consequencecs</h5>
+                  <ul>
+                    <li
+                      v-for="(duty, _index) in obligation.consequences"
+                      :key="_index"
+                    >
+                      <span
+                        v-for="(action, _index) in duty.actions"
+                        :key="_index"
+                        v-html="replaceURLByLink(action.sentence)"
+                      >
+                      </span>
+
+                      <template
+                        v-if="duty.constraints && duty.constraints.length > 0"
+                      >
+                        <h5 class="yellow">
+                          {{ index + 1 }}.1. Duty constraints
+                        </h5>
+                        <ul>
+                          <li
+                            v-for="(constraint, _index) in duty.constraints"
+                            :key="_index"
+                          >
+                            <span
+                              v-html="
+                                replaceURLByLink(
+                                  `${index + 1}.1.${_index + 1}. ${constraint}`
+                                )
+                              "
+                            ></span>
+                          </li>
+                        </ul>
+                      </template>
+                    </li>
+                  </ul>
+                </template>
+
+                <hr />
               </li>
             </ul>
           </template>

@@ -7,11 +7,6 @@ import { ODRL } from "./namespaces.js";
 import Constraint from "./constraint.js";
 
 export default class Duty extends Rule {
-  /**
-   * List of the duty's constraints.
-   */
-  #constraints: Array<Constraint> = [];
-
   #consequences: Array<Duty> = [];
 
   constructor(kb: $rdf.Formula, statement: $rdf.Statement) {
@@ -21,7 +16,7 @@ export default class Duty extends Rule {
   }
 
   get constraints() {
-    return this.#constraints;
+    return this._constraints;
   }
 
   #setConstraints() {
@@ -32,8 +27,19 @@ export default class Duty extends Rule {
 
     if (constraints && constraints.length > 0) {
       constraints.forEach((constraint) => {
-        this.#constraints.push(new Constraint(this.kb, constraint));
+        this._constraints.push(new Constraint(this.kb, constraint, this));
       });
     }
+  }
+
+  public toJSON(): ReturnType<Rule["toJSON"]> & {
+    consequences: Array<ReturnType<Duty["toJSON"]>>;
+  } {
+    return {
+      ...super.toJSON(),
+      consequences: this.#consequences.map((consequence) =>
+        consequence.toJSON()
+      ),
+    };
   }
 }

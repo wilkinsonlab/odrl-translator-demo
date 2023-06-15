@@ -15,6 +15,8 @@ import Duty from "./duty.js";
 import Constraint from "./constraint.js";
 import { interpolate } from "@poppinss/utils/build/helpers.js";
 import Asset from "./asset.js";
+import Rule from "./rule.js";
+import PolicyTranslator from "./translator.js";
 
 type PermissionType = {
   sentence: string;
@@ -29,13 +31,15 @@ type ProhibitionType = {
 
 type DutyType = {
   sentence: string;
-  constraints?: Array<string>;
+  constraints: Array<string>;
+  consequences: Array<string>;
 };
 
 type PolicyType = {
   description: string;
   permissions: Array<PermissionType>;
   prohibitions: Array<ProhibitionType>;
+  obligations: Array<DutyType>;
 };
 
 const RDF = $rdf.Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
@@ -111,10 +115,14 @@ export default async function parsePolicy(
                   description: "",
                   permissions: [],
                   prohibitions: [],
+                  obligations: [],
                 };
 
                 const policy = new Policy(kb, policyIRI);
-                const permissions = policy.permissions;
+                const translator = new PolicyTranslator(policy.toJSON());
+                await translator.translate();
+                policies.push(translator.translations);
+                /*const permissions = policy.permissions;
                 const prohibitions = policy.prohibitions;
                 const permissionsSentences = [];
                 const prohibitionsSentences = [];
@@ -132,29 +140,27 @@ export default async function parsePolicy(
 
                   if (actions) {
                     for (const action of actions!) {
-                      actionsLabels.push(
-                        (await action.label()) + " " + (action.context ?? "")
-                      );
+                      actionsLabels.push(await action.label());
 
                       if (action.refinements.length > 0) {
                         for (const refinement of action.refinements) {
                           actionsRefinementsSetnences.push(
-                            await parseConstraint(refinement, kb)
+                            await parseConstraint(refinement, permission)
                           );
                         }
                       }
                     }
                   }
 
-                  let permissionSentence = `The policy issuer, defined as ${assigner?.sources.map(
-                    (source) => lastURISegment(source)
+                  let permissionSentence = `The policy issuer, defined as ${assigner?.values.map(
+                    (value) => lastURISegment(value)
                   )} gives the permission`;
 
-                  if (assignee && assignee.sources.length > 0) {
+                  if (assignee && assignee.values.length > 0) {
                     permissionSentence += assignee
                       ? ` to ${listToString(
-                          assignee.sources.map(
-                            (source) => lastURISegment(source)!
+                          assignee.values.map(
+                            (value) => lastURISegment(source)!
                           )
                         )}`
                       : "";
@@ -175,7 +181,7 @@ export default async function parsePolicy(
                     for (const constraint of constraints) {
                       const constraintSentence = await parseConstraint(
                         constraint,
-                        kb
+                        permission
                       );
                       finalPermissionObject.constraints.push(
                         language !== "english"
@@ -246,23 +252,26 @@ export default async function parsePolicy(
                     sentence: "",
                   };
 
-                  const targetsSentences = [];
+                  /*const targetsSentences = [];
 
                   for (const target of targets!) {
                     let sentence = "the ";
 
-                    const targetType = target.type;
+                    const targetType = target.types;
 
-                    sentence +=
-                      targetType && targetType === ODRL("AssetCollection").value
+                    if (targetType.length > 0) {
+                      sentence +=
+                      targetType.includes(ODRL("AssetCollection").value)
                         ? "collection of assets"
                         : "asset";
+                    }
+
                     sentence += ` located at ${target.url}`;
 
                     targetsSentences.push(sentence);
-                  }
+                  }*/
 
-                  const actionsLabels = [];
+                /*const actionsLabels = [];
 
                   if (actions) {
                     for (const action of actions) {
@@ -274,17 +283,13 @@ export default async function parsePolicy(
 
                   if (assigners) {
                     prohibitionSentence += `The data controllers(s), defined as ${listToString(
-                      assigners?.sources.map(
-                        (assigner) => lastURISegment(assigner)!
-                      )
+                      assigners?.values.map((value) => lastURISegment(value)!)
                     )} prohibits `;
                   }
 
                   prohibitionSentence += assignees
                     ? ` to ${listToString(
-                        assignees?.sources.map(
-                          (assignee) => lastURISegment(assignee)!
-                        )
+                        assignees?.values.map((value) => lastURISegment(value)!)
                       )}`
                     : "";
 
@@ -294,7 +299,7 @@ export default async function parsePolicy(
                     )} `;
                   }
 
-                  prohibitionSentence += listToString(targetsSentences);
+                  prohibitionSentence += parseTargets(targets!, kb);
 
                   if (language !== "english") {
                     prohibitionSentence = await translate(
@@ -353,7 +358,7 @@ export default async function parsePolicy(
                 policyTranslation.permissions = permissionsSentences;
                 policyTranslation.prohibitions = prohibitionsSentences;
 
-                policies.push(policyTranslation);
+                policies.push(policyTranslation);*/
               }
 
               resolve(policies);
@@ -378,17 +383,20 @@ async function getStore(urls: Array<string>) {
   return store;
 }
 
-async function parseConstraint(constraint: Constraint, kb: $rdf.Formula) {
+async function parseConstraint(
+  constraint: Constraint,
+  parent: Rule,
+  actionIRI?: string,
+  ruleType?: string
+) {
   const leftOperand = constraint.leftOperand;
+  const operator = constraint.operator;
+  const rightOperands = constraint.rightOperands;
 
   let permissionSentence = "";
 
   if (leftOperand) {
-    const operator = constraint.operator;
-
     if (operator) {
-      const rightOperands = constraint.rightOperands;
-
       if (rightOperands.length > 0) {
         const operatorSentence = getSentence(operator.object.value);
 
@@ -401,7 +409,7 @@ async function parseConstraint(constraint: Constraint, kb: $rdf.Formula) {
           ODRL("meteredTime").value,
         ].includes(leftOperand.object.value);
 
-        if (isDuration) {
+        /*if (isDuration) {
           leftOperandLabel = interpolate(leftOperandLabel, {
             rule: constraint.rule.type,
             action: listToString(await constraint.rule.getActionLabels()),
@@ -410,12 +418,69 @@ async function parseConstraint(constraint: Constraint, kb: $rdf.Formula) {
           permissionSentence += leftOperandLabel;
         } else {
           permissionSentence += `${leftOperandLabel} ${operatorSentence}`;
-        }
+        }*/
       }
 
-      permissionSentence += " ";
-      permissionSentence += await constraint.rightOperandLabels();
+      /*permissionSentence += " ";
+      permissionSentence += await constraint.rightOperandLabels();*/
     }
+  }
+
+  let sentence = null;
+
+  if (actionIRI && actionIRI === ODRL("share").value) {
+    sentence = getSentence(
+      `${ODRL("share").value}.${leftOperand.object.value}`
+    );
+  } else {
+    if (leftOperand.object.value === ODRL("event").value) {
+      sentence = getSentence(
+        `${ruleType}.${leftOperand.object.value}.${operator.object.value}`
+      );
+    } else {
+      sentence = getSentence(
+        `${leftOperand.object.value}.${operator.object.value}`
+      );
+    }
+
+    if (!sentence) {
+      sentence = getSentence(
+        `${leftOperand.object.value}.${operator.object.value}`
+      );
+    }
+  }
+
+  const rightOperandLabels = await constraint.rightOperandLabels();
+
+  if (sentence) {
+    const data = {
+      rightOperand: rightOperandLabels,
+    };
+
+    if (actionIRI === ODRL("share").value) {
+      const sharedParty = parent.functions.get("sharedParty");
+
+      console.log(parent.functions);
+
+      if (sharedParty) {
+        const name = sharedParty.name;
+        const urls = sharedParty.values;
+
+        if (name) {
+          data.sharedParty = name;
+        } else {
+          if (urls) {
+            data.sharedParty = listToString(urls);
+          }
+        }
+      }
+    }
+
+    permissionSentence += interpolate(sentence, data);
+  } else {
+    permissionSentence += await constraint.leftOperandLabel();
+    permissionSentence += ` ${getSentence(operator.object.value)} `;
+    permissionSentence += rightOperandLabels;
   }
 
   return permissionSentence;
@@ -429,10 +494,11 @@ async function parseDuty(
 ) {
   const _duty = {
     sentence: "",
-    constraints: [] as Array<string>,
+    constraints: [],
+    consequences: [],
   };
   const dutyTargets = duty.targets;
-  const dutyAssigners = duty.functions.get("assigner")?.sources;
+  const dutyAssigners = duty.functions.get("assigner")?.values;
   const dutyConstraints = duty.constraints;
   const actionsLabels = [];
 
@@ -458,14 +524,13 @@ async function parseDuty(
         toPreposition.push(actionLabel);
       }
 
-      dutySentence += listToString(actionsLabels);
+      //dutySentence += listToString(actionsLabels);
 
       if (toPreposition.length > 0) {
-        dutySentence += `${listToString(toPreposition)} to`;
+        //dutySentence += `${listToString(toPreposition)} to`;
       }
 
       dutySentence += " ";
-      dutySentence += `${action.context} ` ?? "";
 
       if (dutyTargets && dutyTargets.length > 0) {
         dutySentence += `${parseTargets(dutyTargets, kb)}`;
@@ -484,10 +549,11 @@ async function parseDuty(
       }
 
       const actionRefinements = action.refinements;
+      const refinements = [];
 
-      if (actionRefinements && actionRefinements.length > 0) {
+      if (actionRefinements.length > 0) {
         for (const refinement of actionRefinements) {
-          const leftOperand = refinement.leftOperand;
+          /*const leftOperand = refinement.leftOperand;
           const operator = refinement.operator;
           const rightOperands = refinement.rightOperands;
           const unit = refinement.unit;
@@ -540,8 +606,22 @@ async function parseDuty(
 
               dutySentence += ` ${label.object.value}`;
             }
-          }
+          }*/
+
+          refinements.push(await parseConstraint(refinement, duty, action.iri));
         }
+      }
+
+      if (refinements.length > 0) {
+        dutySentence += listToString(refinements);
+      }
+
+      if (action.iri === ODRL("obtainConsent").value) {
+        dutySentence += interpolate(getSentence(action.iri), {
+          consentingParty: listToString(
+            duty.functions.get("consentingParty")?.values
+          ),
+        });
       }
     }
   }
@@ -558,7 +638,7 @@ async function parseDuty(
 
       const rightOperands = constraint.rightOperands;
 
-      let dutyConstraintSentence = "The ";
+      /*let dutyConstraintSentence = "The ";
       dutyConstraintSentence += listToString(actionsLabels);
       dutyConstraintSentence += ` action${actionsLabels.length > 1 ? "s" : ""}`;
       dutyConstraintSentence += " ";
@@ -575,7 +655,15 @@ async function parseDuty(
 
       if (leftOperand.object.value === ODRL("percentage").value) {
         dutyConstraintSentence += "%";
-      }
+      }*/
+
+      let dutyConstraintSentence = "Duty ";
+      dutyConstraintSentence += await parseConstraint(
+        constraint,
+        parent,
+        undefined,
+        ODRL("duty").value
+      );
 
       _duty.constraints.push(dutyConstraintSentence);
     }
@@ -592,13 +680,24 @@ function parseTargets(targets: Array<Asset>, kb: $rdf.Formula) {
     /**
      * Useful to know if it's a collection of assets or not.
      */
-    const targetType = target.type;
+    const targetTypes = target.types;
 
-    sentence +=
-      targetType && targetType === ODRL("AssetCollection").value
+    if (targetTypes.length > 0) {
+      sentence += targetTypes.includes(ODRL("AssetCollection").value)
         ? "collection of assets"
         : "asset";
-    sentence += ` located at ${target.url}`;
+    }
+
+    const title = target.title;
+    const urls = target.urls;
+
+    if (title) {
+      sentence += ` (${title})`;
+    }
+
+    if (urls.length > 0) {
+      sentence += ` located at ${listToString(urls)}`;
+    }
 
     targetsSentences.push(sentence);
   }

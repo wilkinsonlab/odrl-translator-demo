@@ -34,6 +34,10 @@ export default class StatementsMatcher {
       this.#object
     );
 
+    this.#subject = undefined;
+    this.#predicate = undefined;
+    this.#object = undefined;
+
     if (result && result.length > 0) {
       return result;
     }

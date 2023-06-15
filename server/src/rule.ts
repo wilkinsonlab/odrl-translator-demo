@@ -1,13 +1,14 @@
 import * as $rdf from "rdflib";
 
 import { RuleType, Functions } from "./enums.js";
-import { ODRL } from "./namespaces.js";
+import { DCE, DCTERMS, OCCE, ODRL } from "./namespaces.js";
 import { enumKeys } from "./utils.js";
 import Exception from "./exception.js";
 import StatementsMatcher from "./statements_matcher.js";
 import Action from "./action.js";
 import Party from "./party.js";
 import Asset from "./asset.js";
+import Constraint from "./constraint.js";
 
 export default class Rule {
   /**************************** ATTRIBUTES *****************************/
@@ -20,6 +21,16 @@ export default class Rule {
   protected uid?: string;
 
   /**
+   * The CCE rule.
+   */
+  protected _cce: string;
+
+  /**
+   * The rule coverage.
+   */
+  protected _coverage: string | null = null;
+
+  /**
    * The actions of the rule.
    */
   protected _actions: Array<Action>;
@@ -27,17 +38,22 @@ export default class Rule {
   /**
    * The targets of the rule.
    */
-  protected _targets?: Array<Asset>;
+  protected _targets: Array<Asset> = [];
 
   /**
    * The output of the rule.
    */
-  protected _output?: $rdf.Statement;
+  protected _outputs: Array<Asset> = [];
 
   /**
    * The functions of the rule.
    */
   protected _functions: Map<`${Functions}`, Party> = new Map();
+
+  /**
+   * List of the duty's constraints.
+   */
+  protected _constraints: Array<Constraint> = [];
 
   /**************************** CONSTRUCTOR *****************************/
 
@@ -48,6 +64,8 @@ export default class Rule {
   ) {
     this.statementsMatcher = new StatementsMatcher(this.kb);
 
+    this.#setCCE();
+    this.#setCoverage();
     this.#setActions();
     this.#setTargets();
     this.#setFunctions();
@@ -71,6 +89,10 @@ export default class Rule {
     return this._type;
   }
 
+  public get cce() {
+    return this._cce;
+  }
+
   /****************************** METHODS ******************************/
 
   public async getActionLabels() {
@@ -81,6 +103,28 @@ export default class Rule {
     }
 
     return actionsLabels;
+  }
+
+  #setCCE() {
+    const result = this.statementsMatcher
+      .subject(this.statement.object)
+      .predicate(DCE("subject"))
+      .execute();
+
+    if (result) {
+      this._cce = result[0].object.value;
+    }
+  }
+
+  #setCoverage() {
+    const result = this.statementsMatcher
+      .subject(this.statement.object)
+      .predicate(DCTERMS("coverage"))
+      .execute();
+
+    if (result) {
+      this._coverage = result[0].object.value;
+    }
   }
 
   #setActions() {
@@ -95,7 +139,7 @@ export default class Rule {
       );
     } else {
       throw new Exception(
-        `At least one action must be defined in the ${this.type}`,
+        `At least one action must be defined in the ${this.type} - ${this.statement.object.value}`,
         500,
         "E_NO_ACTION_DEFINED"
       );
@@ -118,7 +162,7 @@ export default class Rule {
        */
       if (this.type !== RuleType.DUTY) {
         throw new Exception(
-          `A target property must be defined in the ${this.type}`,
+          `A target property must be defined in the ${this.type} - ${this.statement.object.value}`,
           500,
           "E_NO_TARGET_DEFINED"
         );
@@ -129,14 +173,56 @@ export default class Rule {
   #setFunctions() {
     for (const key of enumKeys(Functions)) {
       const functionValue = Functions[key];
-      const result = this.statementsMatcher
+      let result = this.statementsMatcher
         .subject(this.statement.object)
         .predicate(ODRL(functionValue))
         .execute();
 
       if (result) {
         this._functions.set(functionValue, new Party(this.kb, result[0]));
+      } else {
+        result = this.statementsMatcher
+          .subject(this.statement.object)
+          .predicate(OCCE(functionValue))
+          .execute();
+
+        if (result) {
+          this._functions.set(functionValue, new Party(this.kb, result[0]));
+        }
       }
     }
+  }
+
+  public toJSON() {
+    const initialFunctions: Record<
+      `${Functions}`,
+      Array<ReturnType<Party["toJSON"]>>
+    > = Array.from(Object.values(Functions)).reduce(
+      (functions: any, currentFunction) => {
+        functions[currentFunction] = [];
+
+        return functions;
+      },
+      {}
+    );
+
+    const functions = Array.from(this._functions.entries()).reduce<
+      Record<`${Functions}`, Array<ReturnType<Party["toJSON"]>>>
+    >((_functions, [_function, party]) => {
+      _functions[_function].push(party.toJSON());
+
+      return _functions;
+    }, initialFunctions);
+
+    return {
+      id: this.statement.object.value,
+      cce: this._cce,
+      coverage: this._coverage,
+      functions,
+      actions: this._actions.map((action) => action.toJSON()),
+      targets: this._targets.map((target) => target.toJSON()),
+      outputs: this._outputs.map((target) => target.toJSON()),
+      constraints: this._constraints.map((constraint) => constraint.toJSON()),
+    };
   }
 }

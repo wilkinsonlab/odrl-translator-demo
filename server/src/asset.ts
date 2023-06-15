@@ -1,7 +1,7 @@
 import * as $rdf from "rdflib";
 
 import Rule from "./rule.js";
-import { RDF, ODRL } from "./namespaces.js";
+import { RDF, ODRL, DCTERMS } from "./namespaces.js";
 import { getSentenceOrLabel, isValidUrl } from "./utils.js";
 import StatementsMatcher from "./statements_matcher.js";
 import Constraint from "./constraint.js";
@@ -11,9 +11,11 @@ export default class Asset {
 
   #statementsMatcher: StatementsMatcher;
 
-  #type: string;
+  #types: Array<string> = [];
 
-  #url: string;
+  #urls: Array<string> = [];
+
+  #title?: string;
 
   #refinements: Array<Constraint> = [];
 
@@ -26,23 +28,28 @@ export default class Asset {
   ) {
     this.#statementsMatcher = new StatementsMatcher(this.kb);
 
-    this.#setType();
+    this.#setTypes();
     this.#setURL();
+    this.#setTitle();
     this.#setRefinements();
   }
 
   /****************************** GETTERS ******************************/
 
-  public get type() {
-    return this.#type;
+  public get types() {
+    return this.#types;
   }
 
-  public get url() {
-    return this.#url;
+  public get urls() {
+    return this.#urls;
   }
 
   public get iri() {
     return this.#getIRIStatement().object.value;
+  }
+
+  public get title() {
+    return this.#title;
   }
 
   public get isObject() {
@@ -70,7 +77,7 @@ export default class Asset {
     )[0].toLowerCase();
   }
 
-  #setType(): void {
+  #setTypes(): void {
     const statement = this.statement;
 
     if (this.isObject) {
@@ -80,7 +87,24 @@ export default class Asset {
         .execute();
 
       if (result) {
-        this.#type = result[0].object.value;
+        result.forEach((type) => {
+          this.#types.push(type.object.value);
+        });
+      }
+    }
+  }
+
+  #setTitle(): void {
+    const statement = this.statement;
+
+    if (this.isObject) {
+      const result = this.#statementsMatcher
+        .subject(statement.object)
+        .predicate(DCTERMS("title"))
+        .execute();
+
+      if (result) {
+        this.#title = result[0].object.value;
       }
     }
   }
@@ -100,7 +124,9 @@ export default class Asset {
           .execute();
 
       if (result) {
-        this.#url = result[0].object.value;
+        result.forEach((url) => {
+          this.#urls.push(url.object.value);
+        });
       }
     }
   }
@@ -137,5 +163,15 @@ export default class Asset {
         this.#refinements.push(new Constraint(this.kb, duty, this.rule));
       });
     }
+  }
+
+  public toJSON() {
+    return {
+      id: this.statement.object.value,
+      types: this.#types.map((type) => type),
+      title: this.#title,
+      urls: this.#urls,
+      refinements: this.#refinements.map((refinement) => refinement.toJSON()),
+    };
   }
 }

@@ -1,6 +1,6 @@
 import * as $rdf from "rdflib";
 
-import { ODRL, RDF } from "./namespaces.js";
+import { ODRL, RDF, VCARD } from "./namespaces.js";
 import { isValidUrl } from "./utils.js";
 import StatementsMatcher from "./statements_matcher.js";
 import PartyCollection from "./party_collection";
@@ -12,11 +12,13 @@ export default class Party {
 
   #statementsMatcher: StatementsMatcher;
 
-  #uid: string;
+  #name?: string;
 
   #types: Array<$rdf.Statement> = [];
 
-  #sources: Array<string>;
+  #subTypes: Array<$rdf.Statement> = [];
+
+  #values: Array<string> = [];
 
   #partOf?: PartyCollection;
 
@@ -32,6 +34,8 @@ export default class Party {
     this.#statementsMatcher = new StatementsMatcher(this.kb);
 
     this.#setType();
+    this.#setSubType();
+    this.#setName();
     this.#setSources();
   }
 
@@ -41,8 +45,12 @@ export default class Party {
     return this.#types;
   }
 
-  public get sources() {
-    return this.#sources;
+  public get name() {
+    return this.#name;
+  }
+
+  public get values() {
+    return this.#values;
   }
 
   /****************************** METHODS ******************************/
@@ -58,13 +66,36 @@ export default class Party {
     }
   }
 
+  #setSubType() {
+    const result = this.#statementsMatcher
+      .subject(this.statement.subject)
+      .predicate(undefined)
+      .object(this.statement.object)
+      .execute();
+
+    if (result && result.length > 0) {
+      this.#subTypes = result;
+    }
+  }
+
+  #setName() {
+    const result = this.#statementsMatcher
+      .subject(this.statement.object)
+      .predicate(VCARD("fn"))
+      .execute();
+
+    if (result && result.length > 0) {
+      this.#name = result[0].object.value;
+    }
+  }
+
   #setSources() {
     const object = this.statement.object;
     const nextTriple = this.#statementsMatcher.subject(object).execute();
 
     // The object's value can be a subject for another triple.
     if (!nextTriple && isValidUrl(this.statement.object.value)) {
-      this.#sources = [this.statement.object.value];
+      this.#values = [this.statement.object.value];
     } else {
       const sources = this.#statementsMatcher
         .subject(this.statement.object)
@@ -72,8 +103,28 @@ export default class Party {
         .execute();
 
       if (sources) {
-        this.#sources = sources.map((source) => source.object.value);
+        this.#values = sources.map((source) => source.object.value);
+      } else {
+        const uids = this.#statementsMatcher
+          .subject(this.statement.object)
+          .predicate(ODRL("uid"))
+          .execute();
+
+        if (uids) {
+          this.#values = uids.map((uid) => uid.object.value);
+        }
       }
     }
+  }
+
+  public toJSON() {
+    return {
+      id: this.statement.object.value,
+      types: this.#types.map((type) => type.object.value),
+      subType: this.#subTypes.map((subType) => subType.predicate.value),
+      name: this.#name,
+      values: this.#values,
+      //refinements: this.#refinements.map((refinement) => refinement.toJSON()),
+    };
   }
 }
