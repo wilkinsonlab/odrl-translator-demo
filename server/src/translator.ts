@@ -659,9 +659,15 @@ export default class PolicyTranslator {
     }
 
     for (const constraint of constraints) {
-      this.#translations.obligations[duty.id].constraints.push(
-        await this.#translateConstraint(constraint)
-      );
+      if (parentId) {
+        this.#translations.permissions[parentId].duties[
+          duty.id
+        ].constraints.push(await this.#translateConstraint(constraint));
+      } else {
+        this.#translations.obligations[duty.id].constraints.push(
+          await this.#translateConstraint(constraint)
+        );
+      }
     }
   }
 }

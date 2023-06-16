@@ -149,21 +149,13 @@ async function onSubmit() {
                       <template
                         v-if="duty.constraints && duty.constraints.length > 0"
                       >
-                        <h5 class="yellow">
-                          {{ index + 1 }}.1. Duty constraints
-                        </h5>
+                        <h5 class="yellow">Duty constraints</h5>
                         <ul>
                           <li
                             v-for="(constraint, _index) in duty.constraints"
                             :key="_index"
                           >
-                            <span
-                              v-html="
-                                replaceURLByLink(
-                                  `${index + 1}.1.${_index + 1}. ${constraint}`
-                                )
-                              "
-                            ></span>
+                            <span v-html="replaceURLByLink(constraint)"></span>
                           </li>
                         </ul>
                       </template>

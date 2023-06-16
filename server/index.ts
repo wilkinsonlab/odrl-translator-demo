@@ -15,14 +15,13 @@ const port = 3000;
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "*",
   })
 );
 app.use(express.json());
 
 app.post("/translate", async (req, res) => {
   const response = await parsePolicy(req.body.policy, req.body.language);
-  console.dir(response, { depth: null });
   res.send({ policies: response });
 });
 

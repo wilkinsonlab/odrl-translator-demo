@@ -1,0 +1,9 @@
+.git
+Dockerfile
+docker-compose.yml
+frontend/Dockerfile
+frontend/node_modules
+server/Dockerfile
+server/node_modules
+server/pnpm-lock.yaml
+frontend/pnpm-lock.yaml
