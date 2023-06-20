@@ -62,6 +62,9 @@ function removeRule(index: number) {
             <option :value="ODRL('Offer').value">Offer</option>
             <option :value="ODRL('Agreement').value">Agreement</option>
             <option :value="ODRL('Request').value">Request</option>
+            <option :value="ODRL('Privacy').value">Privacy</option>
+            <option :value="ODRL('Assertion').value">Assertion</option>
+            <option :value="ODRL('Ticket').value">Ticket</option>
           </select>
         </p>
         <p v-if="policy.type === ODRL('Agreement').value">

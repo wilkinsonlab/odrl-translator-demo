@@ -8,7 +8,7 @@ const policies = reactive({
   policies: [] as any
 });
 
-/*const policy = reactive({
+const policy = reactive({
   id: useGetRandomID(),
   type: ODRL("Set").value,
   creator: null,
@@ -20,9 +20,9 @@ const policies = reactive({
     obligations: [] as Array<Obligation>
   },
   references: [] as Array<any>
-});*/
+});
 
-const policy = reactive({
+/*const policy = reactive({
   id: 3135535980,
   type: "http://www.w3.org/ns/odrl/2/Offer",
   creator: null,
@@ -339,7 +339,7 @@ const policy = reactive({
     obligations: []
   },
   references: []
-});
+});*/
 
 policies.policies.push(policy);
 
