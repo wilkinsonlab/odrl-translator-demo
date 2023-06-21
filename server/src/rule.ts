@@ -9,6 +9,7 @@ import Action from "./action.js";
 import Party from "./party.js";
 import Asset from "./asset.js";
 import Constraint from "./constraint.js";
+import cces from "./cces.js";
 
 export default class Rule {
   /**************************** ATTRIBUTES *****************************/
@@ -23,7 +24,7 @@ export default class Rule {
   /**
    * The CCE rule.
    */
-  protected _cce: string;
+  protected _cce: keyof typeof cces;
 
   /**
    * The rule coverage.
@@ -112,7 +113,7 @@ export default class Rule {
       .execute();
 
     if (result) {
-      this._cce = result[0].object.value;
+      this._cce = result[0].object.value as keyof typeof cces;
     }
   }
 

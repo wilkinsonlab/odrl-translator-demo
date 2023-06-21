@@ -9,6 +9,7 @@ import {
   isValidUrl,
   listToString,
 } from "./utils.js";
+import cces from "./cces.js";
 import Permission from "./permission.js";
 import Action from "./action.js";
 import Rule from "./rule.js";
@@ -77,7 +78,7 @@ export default class PolicyTranslator {
     for (const permission of permissions) {
       if (!(permission.id in this.#translations.permissions)) {
         this.#translations.permissions[permission.id] = {
-          cce: permission.cce,
+          cce: cces[permission.cce],
           actions: [],
           duties: {},
           constraints: [],
@@ -102,7 +103,7 @@ export default class PolicyTranslator {
     for (const prohibition of prohibitions) {
       if (!(prohibition.id in this.#translations.prohibitions)) {
         this.#translations.prohibitions[prohibition.id] = {
-          cce: prohibition.cce,
+          cce: cces[prohibition.cce],
           actions: [],
           remedies: {},
           constraints: [],
@@ -115,7 +116,7 @@ export default class PolicyTranslator {
     for (const obligation of obligations) {
       if (!(obligation.id in this.#translations.obligations)) {
         this.#translations.obligations[obligation.id] = {
-          cce: obligation.cce,
+          cce: cces[obligation.cce],
           actions: [],
           consequences: {},
           constraints: [],
