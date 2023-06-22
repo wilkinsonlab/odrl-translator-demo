@@ -277,7 +277,7 @@ async function onSubmit() {
           </template>
 
           <template v-if="Object.keys(policy.obligations).length > 0">
-            <h3 class="orange">Obligtions</h3>
+            <h3 class="orange">Obligations</h3>
 
             <ul>
               <li
