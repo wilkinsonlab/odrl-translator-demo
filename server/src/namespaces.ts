@@ -17,3 +17,4 @@ export const DCTERMS = $rdf.Namespace("http://purl.org/dc/terms/");
 export const DPV = $rdf.Namespace("https://w3id.org/dpv#");
 export const VCARD = $rdf.Namespace("http://www.w3.org/2006/vcard/ns#");
 export const CC = $rdf.Namespace("http://creativecommons.org/ns#");
+export const SWO = $rdf.Namespace("http://www.ebi.ac.uk/swo/license/");

@@ -15,7 +15,7 @@ export default async function fetchIRI(
       const store = $rdf.graph();
 
       const regex = new RegExp(
-        "ICO_|NCIT_|HP_|UBERON_|MP_|SYMP_|SIO_|DUO_|EFO_|T4FS_|EDAM_",
+        "ICO_|NCIT_|HP_|UBERON_|MP_|SYMP_|SIO_|DUO_|EFO_|T4FS_|EDAM_|SWO_",
         "g"
       );
       const phenotype = iri.match(regex);

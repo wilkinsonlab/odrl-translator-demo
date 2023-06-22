@@ -1,6 +1,6 @@
 import { interpolate } from "@poppinss/utils/build/helpers.js";
 
-import { ODRL, XSD, OCCE, OBO, DPV, CC } from "./namespaces.js";
+import { ODRL, XSD, OCCE, OBO, DPV, CC, SWO } from "./namespaces.js";
 import numericTypes from "./numeric_types.js";
 import dateTypes from "./date_types.js";
 import { isValidUrl } from "./utils.js";
@@ -30,6 +30,7 @@ export default function getSentence(
     [OBO("NCIT_C73529").value]: "Collaborate",
     [OBO("NCIT_C19026").value]: "Publish a Scientific Publication",
     [OBO("NCIT_C64950").value]: "Adhere to",
+    ["http://schema.org/RegisterAction"]: "Register",
     ["http://edamontology.org/format_1915"]: "Data format",
     [`${ODRL("purpose").value}.${ODRL("isAllOf").value}`]:
       "Purpose must be all of {{ rightOperand }}",
@@ -54,14 +55,14 @@ export default function getSentence(
     [ODRL("use").value]: "use",
     [ODRL("policyUsage").value]: "the rule is exercised",
     [ODRL("isA").value]: "must be",
-    [ODRL("lt").value]: "lesser than",
-    [ODRL("lteq").value]: "lesser than or equal to",
-    [ODRL("eq").value]: "equals to",
-    [ODRL("neq").value]: "not equal to",
-    [ODRL("gt").value]: "greater than",
-    [ODRL("gteq").value]: "greater than or equal to",
-    [ODRL("isAllOf").value]: "is all of",
-    [ODRL("isNoneOf").value]: "is none of",
+    [ODRL("lt").value]: "must be lesser than",
+    [ODRL("lteq").value]: "must be lesser than or equal to",
+    [ODRL("eq").value]: "must be equal to",
+    [ODRL("neq").value]: "must not be equal to",
+    [ODRL("gt").value]: "must be greater than",
+    [ODRL("gteq").value]: "must be greater than or equal to",
+    [ODRL("isAllOf").value]: "must be all of",
+    [ODRL("isNoneOf").value]: "must not be any of",
     [`${ODRL("event").value}.${ODRL("lt").value}`]:
       "Must happen before {{ rightOperand }}",
     [`${ODRL("event").value}.${ODRL("lteq").value}`]:
@@ -118,17 +119,23 @@ export default function getSentence(
     [`${XSD("string").value}.${ODRL("neq").value}`]: "different from",
 
     [OCCE("collaborate").value]: "collaborate with",
+    [OCCE("negotiate").value]: "negotiate",
+    [SWO("SWO_1000136").value]: "Commercial use",
+    [OCCE("duration").value]: "duration",
+    [OCCE("useAsReference").value]: "use as reference",
   } as const;
 
   numericTypes.forEach((type) => {
-    sentences[`${XSD(type).value}.${ODRL("lt").value}`] = "lesser than";
+    sentences[`${XSD(type).value}.${ODRL("lt").value}`] = "must be lesser than";
     sentences[`${XSD(type).value}.${ODRL("lteq").value}`] =
-      "lesser than or equal to";
-    sentences[`${XSD(type).value}.${ODRL("eq").value}`] = "equal to";
-    sentences[`${XSD(type).value}.${ODRL("neq").value}`] = "different from";
-    sentences[`${XSD(type).value}.${ODRL("gt").value}`] = "greater than";
+      "must be lesser than or equal to";
+    sentences[`${XSD(type).value}.${ODRL("eq").value}`] = "must be equal to";
+    sentences[`${XSD(type).value}.${ODRL("neq").value}`] =
+      "must be different from";
+    sentences[`${XSD(type).value}.${ODRL("gt").value}`] =
+      "must be greater than";
     sentences[`${XSD(type).value}.${ODRL("gteq").value}`] =
-      "greater than or equal to";
+      "must be greater than or equal to";
   });
 
   dateTypes.forEach((type) => {

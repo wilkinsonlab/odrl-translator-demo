@@ -1,7 +1,7 @@
 import { interpolate } from "@poppinss/utils/build/helpers.js";
 
 import Policy from "./policy.js";
-import { CC, DPV, OBO, ODRL } from "./namespaces.js";
+import { CC, DPV, OBO, ODRL, OCCE, XSD } from "./namespaces.js";
 import getSentence from "./sentences.js";
 import {
   getLabels,
@@ -16,6 +16,7 @@ import Rule from "./rule.js";
 import Constraint from "./constraint.js";
 import Duty from "./duty.js";
 import Prohibition from "./prohibition.js";
+import parseXSDDuration from "./parse_xsd_duration.js";
 
 export interface BaseRule {
   actions: Array<TranslatedAction>;
@@ -411,6 +412,8 @@ export default class PolicyTranslator {
       acknowledgedParty: [] as Array<string>,
       collaboratingParty: [] as Array<string>,
       collaboratedParty: [] as Array<string>,
+      negotiatingParty: [] as Array<string>,
+      negotiatedParty: [] as Array<string>,
     };
     let sentence = "";
 
@@ -469,20 +472,27 @@ export default class PolicyTranslator {
           hasContext = true;
 
           const labels = await Promise.all(
-            refinement.rightOperand.map(async (value) =>
+            refinement.rightOperand.map(async ({ value }) =>
               typeof value === "string" && isValidUrl(value)
                 ? listToString(await getLabelsFromIRI(value))
                 : value
             )
           );
 
-          sentence += listToString(labels);
+          const conjunction =
+            refinement.operator === ODRL("isAnyOf").value ? "or" : "and";
+
+          sentence += listToString(labels, conjunction);
         }
       }
     }
 
     if (targets.length > 0) {
+      let targetsSentences = [] as Array<string>;
+
       targets.forEach((target) => {
+        let targetSentence = "";
+
         // If a context is defined on the refinement of the action, don't add the targets to the sentence.
         if (
           !hasContext &&
@@ -490,33 +500,44 @@ export default class PolicyTranslator {
             //ODRL("inform").value,
             CC("Attribution").value,
             OBO("NCIT_C73529").value,
+            OBO("NCIT_C19026").value,
+            OCCE("negotiate").value,
           ].includes(iri)
         ) {
           if (target.types.includes("http://www.w3.org/ns/odrl/2/Asset")) {
-            sentence += " the asset";
+            targetSentence += " the asset";
           } else {
-            sentence += " the collection of assets";
+            targetSentence += " the collection of assets";
           }
 
           if (target.title) {
-            sentence += ` (${target.title})`;
+            targetSentence += ` (${target.title})`;
 
             if (target.urls.length > 0) {
-              sentence += " located at ";
+              targetSentence += " located at ";
             }
           }
 
           if (target.urls.length > 0) {
-            sentence += listToString(target.urls);
+            targetSentence += listToString(target.urls);
           }
         }
+
+        targetsSentences.push(targetSentence);
       });
+
+      sentence += listToString(targetsSentences, "and/or");
     }
 
     if (
       (_functions.sharedParty.length > 0 ||
-        _functions.collaboratingParty.length > 0) &&
-      [ODRL("share").value, OBO("NCIT_C73529").value].includes(iri)
+        _functions.collaboratingParty.length > 0 ||
+        _functions.negotiatedParty.length > 0) &&
+      [
+        ODRL("share").value,
+        OBO("NCIT_C73529").value,
+        OCCE("negotiate").value,
+      ].includes(iri)
     ) {
       sentence += " with ";
 
@@ -524,6 +545,8 @@ export default class PolicyTranslator {
         sentence += listToString(_functions.sharedParty);
       } else if (iri === OBO("NCIT_C73529").value) {
         sentence += listToString(_functions.collaboratingParty);
+      } else if (iri === OCCE("negotiate").value) {
+        sentence += listToString(_functions.negotiatedParty);
       }
     }
 
@@ -599,10 +622,14 @@ export default class PolicyTranslator {
   }
 
   async #translateRightOperand(
-    rightOperand: Array<string | number>
+    rightOperand: Array<any>
   ): Promise<Array<string | number>> {
     return await Promise.all(
-      rightOperand.map(async (value) => {
+      rightOperand.map(async ({ value, dataType }) => {
+        if (dataType && dataType === XSD("duration").value) {
+          return parseXSDDuration(value);
+        }
+
         if (typeof value === "string") {
           if (isValidUrl(value)) {
             return (

@@ -174,22 +174,28 @@ export default class Rule {
   #setFunctions() {
     for (const key of enumKeys(Functions)) {
       const functionValue = Functions[key];
-      let result = this.statementsMatcher
+      const odrlFunctions = this.statementsMatcher
         .subject(this.statement.object)
         .predicate(ODRL(functionValue))
         .execute();
 
-      if (result) {
-        this._functions.set(functionValue, new Party(this.kb, result[0]));
-      } else {
-        result = this.statementsMatcher
-          .subject(this.statement.object)
-          .predicate(OCCE(functionValue))
-          .execute();
+      const occeFunctions = this.statementsMatcher
+        .subject(this.statement.object)
+        .predicate(OCCE(functionValue))
+        .execute();
 
-        if (result) {
-          this._functions.set(functionValue, new Party(this.kb, result[0]));
-        }
+      if (odrlFunctions) {
+        this._functions.set(
+          functionValue,
+          new Party(this.kb, odrlFunctions[0])
+        );
+      }
+
+      if (occeFunctions) {
+        this._functions.set(
+          functionValue,
+          new Party(this.kb, occeFunctions[0])
+        );
       }
     }
   }

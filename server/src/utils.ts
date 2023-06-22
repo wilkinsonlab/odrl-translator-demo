@@ -113,12 +113,15 @@ export async function getSentenceOrLabel(
     : (await getLabels(statement, kb)) ?? [value];
 }
 
-export function listToString(strings?: Array<string | number>) {
+export function listToString(
+  strings?: Array<string | number>,
+  conjunction = "and"
+) {
   if (strings && strings.length > 0) {
     return strings
       .filter((string) => string !== "") // Remove empty strings
       .join(", ") // Join the strings
-      .replace(/, ([^,]*)$/, " and $1"); // Remove the last comma and replace it with conjunction
+      .replace(/, ([^,]*)$/, ` ${conjunction} $1`); // Remove the last comma and replace it with conjunction
   }
 
   return "";

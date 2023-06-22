@@ -8,7 +8,7 @@ export default {
   disease_specific_use: "Disease Specific Use",
   use_as_control: "Use As Control",
   profit_motivated_use: "Profit Motivated Use",
-  time_period: "Time Period",
+  time_period_of_use: "Time Period of Use",
   collaboration: "Collaboration",
   fees: "Fees",
   return_of_results: "Return Of Results",

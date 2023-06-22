@@ -229,9 +229,9 @@ export default class Constraint {
       id: this.statement.object?.value ?? this.statement.value,
       leftOperand: this.#leftOperand.object.value,
       operator: this.#operator.object.value,
-      rightOperand: this.#rightOperands.map(
-        (rightOperand) => rightOperand.value
-      ),
+      rightOperand: this.#rightOperands.map((rightOperand) => {
+        return { value: rightOperand.value, dataType: rightOperand.dataType };
+      }),
     };
   }
 }

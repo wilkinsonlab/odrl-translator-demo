@@ -25,6 +25,8 @@ export enum Functions {
   ACKNOWLEDGED_PARTY = "acknowledgedParty",
   COLLABORATING_PARTY = "collaboratingParty",
   COLLABORATED_PARTY = "collaboratedParty",
+  NEGOTIATING_PARTY = "negotiatingParty",
+  NEGOTIATED_PARTY = "negotiatedParty",
 }
 
 export enum LogicalConstraintOperands {
