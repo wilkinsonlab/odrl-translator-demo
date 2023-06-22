@@ -123,6 +123,7 @@ export default function getSentence(
     [SWO("SWO_1000136").value]: "Commercial use",
     [OCCE("duration").value]: "duration",
     [OCCE("useAsReference").value]: "use as reference",
+    [OCCE("developPatent").value]: "develop a patent",
   } as const;
 
   numericTypes.forEach((type) => {

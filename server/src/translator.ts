@@ -502,6 +502,7 @@ export default class PolicyTranslator {
             OBO("NCIT_C73529").value,
             OBO("NCIT_C19026").value,
             OCCE("negotiate").value,
+            OCCE("developPatent").value,
           ].includes(iri)
         ) {
           if (target.types.includes("http://www.w3.org/ns/odrl/2/Asset")) {
