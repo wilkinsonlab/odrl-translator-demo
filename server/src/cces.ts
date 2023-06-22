@@ -1,5 +1,5 @@
 export default {
-  commercial_entity: "Commercial Entity",
+  use_by_commercial_entity: "Use by a Commercial Entity",
   geographical_area: "Geographical Area",
   regulatory_jurisdiction: "Regulatory Jurisdiction",
   research_use: "Research Use",
