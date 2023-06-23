@@ -39,7 +39,7 @@ export default function getSentence(
     [`${OBO("NCIT_C25548").value}.${ODRL("isA").value}`]:
       "{{ rightOperand }} must be involved",
     [`${OBO("NCIT_C25548").value}.${ODRL("isNoneOf").value}`]:
-      "{{ rightOperand }} not be involved",
+      "{{ rightOperand }} must not be involved",
     [`${OBO("NCIT_C64950").value}.${ODRL("isA").value}`]:
       "Must adhere to {{ rightOperand }}",
     [`${OBO("NCIT_C64950").value}.${ODRL("isNoneOf").value}`]:
@@ -124,6 +124,7 @@ export default function getSentence(
     [OCCE("duration").value]: "duration",
     [OCCE("useAsReference").value]: "use as reference",
     [OCCE("developPatent").value]: "develop a patent",
+    [OBO("NCIT_C20200").value]: "Results",
   } as const;
 
   numericTypes.forEach((type) => {
