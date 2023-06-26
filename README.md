@@ -9,9 +9,6 @@
 
 # How to use
 
-- The ODRL translator is located at http://localhost:3000 (or http://127.0.0.1:3000).
-- The ODRL Builder and Translator interfaces are located at http://localhost:5173 (or http://127.0.0.1:5173).
-
 1. Go to the server folder and run the following commands:
 
 ```sh
@@ -32,7 +29,9 @@ pnpm install
 pnpm run dev
 ```
 
-3. Now, you can visit http://127.0.0.1:5173/ and test the translator and/or builder.
+3. Now, you can visit [http://127.0.0.1:5173/](http://127.0.0.1:5173/) and test the ODRL Translator from the web interface. To test the ODRL Builder, go to [http://127.0.0.1:5173/policy_creator](http://127.0.0.1:5173/policy_creator).
+
+- The ODRL translator API is located at http://localhost:3000 (or http://127.0.0.1:3000), but you don't have to visit this URL.
 
 You can also use Docker to run run the server and the web interface in one go:
 
