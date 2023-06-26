@@ -9,7 +9,10 @@
 
 # How to use
 
-1. Go to server and run
+- The ODRL translator is located at http://localhost:3000 (or http://127.0.0.1:3000).
+- The ODRL Builder and Translator interfaces are located at http://localhost:5173 (or http://127.0.0.1:5173).
+
+1. Go to the server folder and run the following commands:
 
 ```sh
 pnpm install
@@ -19,7 +22,7 @@ pnpm install
 pnpm run dev
 ```
 
-2. Go to frontend and run
+2. Go to the frontend folder and run the following commands:
 
 ```sh
 pnpm install
@@ -29,7 +32,13 @@ pnpm install
 pnpm run dev
 ```
 
-3. Now, you can visit http://127.0.0.1:5173/ and test the translator.
+3. Now, you can visit http://127.0.0.1:5173/ and test the translator and/or builder.
+
+You can also use Docker to run run the server and the web interface in one go:
+
+```sh
+docker-compose up --build
+```
 
 # TODO
 
