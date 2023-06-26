@@ -31,7 +31,8 @@ const {
   operand,
   constraintsElement,
   addConstraint,
-  removeConstraint
+  removeConstraint,
+  additionalData
 } = useGroupConstraints(props, parent, initialConstraints);
 
 const constraintsKey = ["rule", "duty"].includes(props.parentType)
@@ -82,11 +83,11 @@ watch(constraints, (newConstraints) => {
         if (newConstraints[i + 1]) {
           newConstraints[i].next = newConstraints[i + 1].id;
         } else {
-          newConstraints[i].next = "null";
+          newConstraints[i].next = null;
         }
       }
     } else {
-      newConstraints[0].next = "null";
+      newConstraints[0].next = null;
     }
 
     if (operand.value) {

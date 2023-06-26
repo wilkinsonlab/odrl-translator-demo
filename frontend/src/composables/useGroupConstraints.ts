@@ -18,12 +18,22 @@ export interface Props {
 }
 
 export function useGroupConstraints(
-  props: Props,
+  { parentType, additionalData }: Props,
   parent: Ref<Rule | Action | Target | Assignee>,
   initialConstraints?: Ref<Array<ConstraintContract> | undefined>
 ) {
   const constraintTypes = ["Constraint", "LogicalConstraint"];
   const operands = ["xone", "or", "and", "andSequence"];
+
+  additionalData = additionalData ?? {};
+
+  if (["action", "target", "assignee"].includes(parentType)) {
+    additionalData.rule_id = (
+      parent.value as Action | Target | Assignee
+    ).rule_id;
+  } else {
+    additionalData.rule_id = (parent.value as Rule).id;
+  }
 
   const constraintsElement = ref<Array<typeof Constraint>>(
     initialConstraints?.value
@@ -63,6 +73,7 @@ export function useGroupConstraints(
     operand,
     constraintsElement,
     addConstraint,
-    removeConstraint
+    removeConstraint,
+    additionalData
   };
 }
