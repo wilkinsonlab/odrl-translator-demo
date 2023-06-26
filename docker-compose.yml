@@ -1,9 +1,10 @@
-version: "3.8"
+version: "3"
 services:
   builder:
     build:
       context: .
       dockerfile: Dockerfile
+    image: markw/odrl-builder-translator:latest
     ports:
       - 127.0.0.1:5173:5173
       - 127.0.0.1:3000:3000

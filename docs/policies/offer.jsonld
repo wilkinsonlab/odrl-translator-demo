@@ -1,0 +1,16 @@
+{
+    "@context": "http://www.w3.org/ns/odrl.jsonld",
+    "@type": "Offer",
+    "@id": "http://example.com/policy:1010",
+    "permission": [{
+       "target": "http://example.com/asset:9898.movie",
+       "assignee": "https://orcid.org/0000-0003-2391-0384",
+       "action": "use",
+       "constraint": [{
+        "leftOperand": "event",
+        "operator": "eq",
+        "rightOperand":  "https://2023.biohackathon.org",
+    "comment": "BioHackathon 2023"
+                    }]
+                }]
+   }
