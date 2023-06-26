@@ -1,5 +1,4 @@
 {
-	"@context": "http://www.w3.org/ns/odrl.jsonld",
     "policies": [
         {
             "id": 3720952352,
