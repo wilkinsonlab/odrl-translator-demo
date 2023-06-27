@@ -176,6 +176,22 @@ export default class PolicyTranslator {
         sentence += "Permission to";
       }
 
+      const assignees = [];
+
+      if (functions.assignee.length > 0) {
+        for (const assignee of functions.assignee) {
+          if (assignee.name) {
+            assignees.push(
+              `${assignee.name} (${listToString(assignee.values)})`
+            );
+          } else {
+            assignees.push(listToString(assignee.values));
+          }
+        }
+
+        sentence += ` ${listToString(assignees)} to`;
+      }
+
       sentence += " ";
 
       sentence += await this.#translateAction(action, permission);
@@ -251,6 +267,22 @@ export default class PolicyTranslator {
         sentence += `${listToString(assigners)} prohibit to`;
       } else {
         sentence += "Prohibition to";
+      }
+
+      const assignees = [];
+
+      if (functions.assignee.length > 0) {
+        for (const assignee of functions.assignee) {
+          if (assignee.name) {
+            assignees.push(
+              `${assignee.name} (${listToString(assignee.values)})`
+            );
+          } else {
+            assignees.push(listToString(assignee.values));
+          }
+        }
+
+        sentence += ` ${listToString(assignees)} to`;
       }
 
       sentence += " ";
@@ -332,12 +364,32 @@ export default class PolicyTranslator {
           }
         }
 
-        sentence += `${listToString(assigners)} oblige to`;
+        sentence += `${listToString(assigners)} oblige`;
       } else {
-        sentence += "Obligation to";
+        sentence += "Obligation";
       }
 
-      sentence += " ";
+      const assignees = [];
+
+      if (functions.assignee.length > 0) {
+        for (const assignee of functions.assignee) {
+          if (assignee.name) {
+            assignees.push(
+              `${assignee.name} (${listToString(assignee.values)})`
+            );
+          } else {
+            assignees.push(listToString(assignee.values));
+          }
+        }
+
+        if (functions.assigner.length == 0) {
+          sentence += " on";
+        }
+
+        sentence += ` ${listToString(assignees)}`;
+      }
+
+      sentence += " to";
 
       sentence += await this.#translateAction(action, obligation);
 
