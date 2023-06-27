@@ -71,7 +71,7 @@ export function useRule(initialRule?: Ref<Rule | undefined>) {
   const duties = ref<Array<typeof Obligation>>(
     initialRule && "duties" in initialRule
       ? new Array(initialRule.value?.duties?.length).fill(markRaw(Obligation))
-      : [markRaw(Obligation)]
+      : []
   );
   const remedies = ref<Array<typeof Obligation>>([]);
   const consequences = ref<Array<typeof Consequence>>([]);
