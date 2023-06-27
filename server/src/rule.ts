@@ -1,7 +1,7 @@
 import * as $rdf from "rdflib";
 
 import { RuleType, Functions } from "./enums.js";
-import { DCE, DCTERMS, OCCE, ODRL } from "./namespaces.js";
+import { DCTERMS, OCCE, ODRL } from "./namespaces.js";
 import { enumKeys } from "./utils.js";
 import Exception from "./exception.js";
 import StatementsMatcher from "./statements_matcher.js";
@@ -109,7 +109,7 @@ export default class Rule {
   #setCCE() {
     const result = this.statementsMatcher
       .subject(this.statement.object)
-      .predicate(DCE("subject"))
+      .predicate(DCTERMS("subject"))
       .execute();
 
     if (result) {

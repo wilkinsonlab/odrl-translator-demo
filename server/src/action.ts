@@ -1,7 +1,7 @@
 import * as $rdf from "rdflib";
 
 import Rule from "./rule.js";
-import { RDF, ODRL, DCE } from "./namespaces.js";
+import { RDF, ODRL } from "./namespaces.js";
 import { getSentenceOrLabel, isValidUrl } from "./utils.js";
 import StatementsMatcher from "./statements_matcher.js";
 import Constraint from "./constraint.js";
