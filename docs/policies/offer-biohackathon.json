@@ -1,45 +1,28 @@
 {
     "policies": [
         {
-            "id": 3720952352,
+            "id": 1427727967,
             "type": "http://www.w3.org/ns/odrl/2/Offer",
             "creator": "https://orcid.org/0000-0001-6960-357X",
-            "description": "A demo offer for the Hackathon",
-            "issued": "2023-06-26",
+            "description": "give it to toshi-san",
+            "issued": "2023-06-27",
             "rules": {
                 "permissions": [
                     {
-                        "id": 136710504,
+                        "id": 1916867795,
                         "type": "http://www.w3.org/ns/odrl/2/permission",
-                        "policy_id": 3720952352,
-                        "cce": "commercial_entity",
+                        "policy_id": 1427727967,
+                        "cce": "collaboration",
                         "targets": [
                             {
-                                "id": 2929409006,
-                                "policy_id": 3720952352,
-                                "rule_id": 136710504,
-                                "uri": "http://my.database.org/polya-data",
+                                "id": 2914807498,
+                                "policy_id": 1427727967,
+                                "rule_id": 1916867795,
+                                "uri": "http://mark.wilkinson/data/polyA",
                                 "type": "http://www.w3.org/ns/odrl/2/Asset",
-                                "uid": "http://my.database.org/polya-data",
+                                "uid": "http://mark.wilkinson/data/polyA",
                                 "source": null,
-                                "refinements": [
-                                    {
-                                        "id": 1853471008,
-                                        "policy_id": 3720952352,
-                                        "left_operand": "http://www.w3.org/ns/odrl/2/event",
-                                        "operator": "http://www.w3.org/ns/odrl/2/eq",
-                                        "valueType": "iri",
-                                        "right_operand_value_iri": "http://2023.biohackathon.org",
-                                        "right_operand_value_string": null,
-                                        "right_operand_value_duration": null,
-                                        "right_operand_value_date": null,
-                                        "right_operand_value_dateTime": null,
-                                        "right_operand_value_float": null,
-                                        "rule_id": 136710504,
-                                        "target_id": 2929409006,
-                                        "next": "null"
-                                    }
-                                ],
+                                "refinements": [],
                                 "operand": null,
                                 "first": null,
                                 "logical_constraints": {
@@ -52,9 +35,9 @@
                         ],
                         "actions": [
                             {
-                                "id": 2147168661,
-                                "policy_id": 3720952352,
-                                "rule_id": 136710504,
+                                "id": 3845079255,
+                                "policy_id": 1427727967,
+                                "rule_id": 1916867795,
                                 "value": "http://www.w3.org/ns/odrl/2/use",
                                 "operand": null,
                                 "first": null,
@@ -64,15 +47,32 @@
                                     "andSequence": [],
                                     "xone": []
                                 },
-                                "refinements": []
+                                "refinements": [
+                                    {
+                                        "id": 2463574632,
+                                        "policy_id": 1427727967,
+                                        "left_operand": "http://www.w3.org/ns/odrl/2/event",
+                                        "operator": "http://www.w3.org/ns/odrl/2/eq",
+                                        "valueType": "iri",
+                                        "right_operand_value_iri": "https://2023.biohackathon.org",
+                                        "right_operand_value_string": null,
+                                        "right_operand_value_duration": null,
+                                        "right_operand_value_date": null,
+                                        "right_operand_value_dateTime": null,
+                                        "right_operand_value_float": null,
+                                        "rule_id": 1916867795,
+                                        "action_id": 3845079255,
+                                        "next": "null"
+                                    }
+                                ]
                             }
                         ],
                         "assigner": "https://orcid.org/0000-0001-6960-357X",
                         "assignees": [
                             {
-                                "id": 3610545672,
-                                "policy_id": 3720952352,
-                                "rule_id": 136710504,
+                                "id": 2001323216,
+                                "policy_id": 1427727967,
+                                "rule_id": 1916867795,
                                 "type": "http://www.w3.org/ns/odrl/2/Party",
                                 "uri": "https://orcid.org/0000-0003-2391-0384",
                                 "uid": "https://orcid.org/0000-0003-2391-0384",
@@ -99,12 +99,12 @@
                         },
                         "duties": [
                             {
-                                "id": 2315568267,
-                                "policy_id": 3720952352,
+                                "id": 3051224310,
+                                "policy_id": 1427727967,
                                 "targets": [
                                     {
-                                        "id": 95110537,
-                                        "policy_id": 3720952352,
+                                        "id": 1414223310,
+                                        "policy_id": 1427727967,
                                         "type": "http://www.w3.org/ns/odrl/2/Asset",
                                         "uid": null,
                                         "source": null,
@@ -117,14 +117,14 @@
                                             "andSequence": [],
                                             "xone": []
                                         },
-                                        "duty_id": 2315568267
+                                        "duty_id": 3051224310
                                     }
                                 ],
                                 "actions": [
                                     {
-                                        "id": 1745962644,
-                                        "policy_id": 3720952352,
-                                        "rule_id": 136710504,
+                                        "id": 2081360282,
+                                        "policy_id": 1427727967,
+                                        "rule_id": 1916867795,
                                         "value": "http://www.w3.org/ns/odrl/2/use",
                                         "operand": null,
                                         "first": null,
@@ -135,7 +135,7 @@
                                             "xone": []
                                         },
                                         "refinements": [],
-                                        "duty_id": 2315568267
+                                        "duty_id": 3051224310
                                     }
                                 ],
                                 "assigner": null,
@@ -149,7 +149,7 @@
                                     "andSequence": [],
                                     "xone": []
                                 },
-                                "rule_id": 136710504,
+                                "rule_id": 1916867795,
                                 "consequences": []
                             }
                         ]
