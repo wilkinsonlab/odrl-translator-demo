@@ -513,10 +513,10 @@ export default class PolicyTranslator {
 
           if (target.title) {
             targetSentence += ` (${target.title})`;
+          }
 
-            if (target.urls.length > 0) {
-              targetSentence += " located at ";
-            }
+          if (target.urls.length > 0) {
+            targetSentence += " located at ";
           }
 
           if (target.urls.length > 0) {
