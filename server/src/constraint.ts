@@ -230,7 +230,13 @@ export default class Constraint {
       leftOperand: this.#leftOperand.object.value,
       operator: this.#operator.object.value,
       rightOperand: this.#rightOperands.map((rightOperand) => {
-        return { value: rightOperand.value, dataType: rightOperand.dataType };
+        return {
+          value:
+            typeof rightOperand.value === "string"
+              ? rightOperand.value.trim()
+              : rightOperand.value,
+          dataType: rightOperand.dataType,
+        };
       }),
     };
   }

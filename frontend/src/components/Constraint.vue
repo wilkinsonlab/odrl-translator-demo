@@ -42,9 +42,12 @@ if (initialConstraint?.value) {
   initialConstraint.value.operator = operator;
   initialConstraint.value.unit = unit;
   initialConstraint.value.valueType = valueType;
-  initialConstraint.value[
-    `right_operand_value_${valueType.value as RightOperandValueType}`
-  ] = rightOperand;
+
+  if (valueType.value && rightOperand.value) {
+    initialConstraint.value[
+      `right_operand_value_${valueType.value as RightOperandValueType}`
+    ] = rightOperand;
+  }
 }
 
 const constraint = reactive(
@@ -126,9 +129,9 @@ watch(valueType, (newValueType, previousValueType) => {
     </select>
 
     <label>Right operand</label>
-    <input type="text" v-model="rightOperand" />
+    <input type="text" v-model.trim="rightOperand" />
 
     <label>Unit</label>
-    <input type="text" v-model="unit" />
+    <input type="text" v-model.trim="unit" />
   </p>
 </template>

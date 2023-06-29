@@ -4,7 +4,7 @@ import { listToString } from "./utils.js";
 
 export default function parseXSDDuration(duration: string): string {
   const { years, months, days, hours, minutes, seconds } = pxd.default(
-    duration,
+    duration.trim(),
     true
   );
   let strings = [];

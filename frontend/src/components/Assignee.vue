@@ -75,7 +75,7 @@ watch(partyType, (newType) => {
     </select>
 
     <label>URI</label>
-    <input v-model="uri" />
+    <input v-model.trim="uri" />
   </p>
 
   <p>

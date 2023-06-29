@@ -141,7 +141,7 @@ export default class Action {
   public toJSON() {
     return {
       id: this.statement.object.value,
-      iri: this.iri,
+      iri: this.iri.trim(),
       refinements: this.#refinements.map((refinement) => refinement.toJSON()),
     };
   }

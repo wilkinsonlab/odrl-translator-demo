@@ -77,7 +77,7 @@ watch(assetType, (newType) => {
     <br />
     <label>URI</label>
     <!--<input v-if="initialTarget" v-model="initialTarget.uid" />-->
-    <input v-model="uri" />
+    <input v-model.trim="uri" />
   </p>
 
   <p>

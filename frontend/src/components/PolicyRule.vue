@@ -160,7 +160,7 @@ watch(ruleType, (newRuleType, previousRuleType) => {
 
       <p>
         <label>Assigner</label>
-        <input type="text" v-model="assigner" />
+        <input type="text" v-model.trim="assigner" />
       </p>
 
       <ul>

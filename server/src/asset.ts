@@ -125,7 +125,7 @@ export default class Asset {
 
       if (result) {
         result.forEach((url) => {
-          this.#urls.push(url.object.value);
+          this.#urls.push(url.object.value.trim());
         });
       }
     }

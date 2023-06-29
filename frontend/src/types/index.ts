@@ -48,14 +48,14 @@ export interface Constraint {
   left_operand: Ref<string | undefined>;
   operator: Ref<string | undefined>;
   valueType: Ref<string>;
-  right_operand_value_iri?: string;
-  right_operand_value_string?: string;
-  right_operand_value_date?: string;
-  right_operand_value_dateTime?: string;
-  right_operand_value_float?: number;
-  right_operand_value_duration?: string;
+  right_operand_value_iri?: string | null;
+  right_operand_value_string?: string | null;
+  right_operand_value_date?: string | null;
+  right_operand_value_dateTime?: string | null;
+  right_operand_value_float?: number | null;
+  right_operand_value_duration?: string | null;
   unit: Ref<string | undefined>;
-  next: number | "null";
+  next: number | null;
 }
 
 export interface Rule extends HasLogicalConstraint {
