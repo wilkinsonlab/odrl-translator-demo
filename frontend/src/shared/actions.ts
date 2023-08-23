@@ -1,6 +1,6 @@
 export default [
   "Attribution",
-  "CommericalUse",
+  "CommercialUse",
   "DerivativeWorks",
   "Distribution",
   "Notice",

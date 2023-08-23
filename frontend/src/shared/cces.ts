@@ -1,6 +1,5 @@
 export default {
-  use_by_commercial_entity: "Use by a Commercial Entity",
-  commercial_entity: "Use by a Commercial Entity",
+  commercial_entity: "Commercial Entity",
   geographical_area: "Geographical Area",
   regulatory_jurisdiction: "Regulatory Jurisdiction",
   research_use: "Research Use",
@@ -9,7 +8,7 @@ export default {
   disease_specific_use: "Disease Specific Use",
   use_as_control: "Use As Control",
   profit_motivated_use: "Profit Motivated Use",
-  time_period_of_use: "Time Period of Use",
+  time_period: "Time Period",
   collaboration: "Collaboration",
   fees: "Fees",
   return_of_results: "Return Of Results",
@@ -21,5 +20,5 @@ export default {
   publication_moratorium: "Publication Moratorium",
   publication: "Publication",
   user_authentication: "User Authentication",
-  ethics_approval: "Ethics Approval",
-} as const;
+  ethics_approval: "Ethics Approval"
+};
