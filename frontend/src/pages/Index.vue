@@ -2,7 +2,6 @@
 import { ref } from "vue";
 
 import { Translation } from "../../../server/src/translator";
-import actions from "../shared/actions";
 
 const input = ref("");
 const language = ref("english");
