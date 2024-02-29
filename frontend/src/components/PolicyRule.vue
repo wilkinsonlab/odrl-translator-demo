@@ -85,7 +85,7 @@ watch(ruleType, (newRuleType, previousRuleType) => {
 <template>
   <section>
     <p>
-      <label>Common Condition of Use Element</label>
+      <label>CCE</label>
       <select v-model="cce">
         <option v-for="(_cce, key) of cces" :key="key" :value="key">
           {{ _cce }}
